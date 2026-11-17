@@ -287,3 +287,22 @@ def test_premier_admin_cree_au_demarrage(db, monkeypatch):
     admins = db.query(User).filter_by(role="admin").all()
     assert len(admins) == 1 and admins[0].email == "responsable@exemple.sn" and not admins[0].compte_active
     assert len(BOITE_ENVOI) == 1 and "/inscription/" in BOITE_ENVOI[0]["message"]
+
+
+def test_refus_brevo_journalise_la_raison(monkeypatch, capsys):
+    import io
+    import urllib.error
+
+    from app import config, notifications
+
+    monkeypatch.setattr(config, "NOTIF_BACKEND", "brevo")
+    monkeypatch.setattr(config, "BREVO_API_KEY", "xkeysib-test")
+
+    def refuser(*args, **kwargs):
+        corps = io.BytesIO(b'{"code":"unauthorized","message":"We have detected you are using an unrecognised IP address"}')
+        raise urllib.error.HTTPError("https://api.brevo.com/v3/smtp/email", 403, "Forbidden", {}, corps)
+
+    monkeypatch.setattr(notifications.urllib.request, "urlopen", refuser)
+    assert notifications.envoyer_email("x@test.sn", "Sujet", "Texte") is False
+    sortie = capsys.readouterr().out
+    assert "HTTP 403" in sortie and "unrecognised IP address" in sortie and "xkeysib-test" not in sortie

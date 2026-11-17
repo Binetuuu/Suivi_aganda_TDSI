@@ -8,6 +8,7 @@
 import json
 import logging
 import smtplib
+import urllib.error
 import urllib.request
 from email.message import EmailMessage
 
@@ -36,8 +37,16 @@ def _envoyer_brevo(adresse: str, sujet: str, message: str) -> bool:
         "https://api.brevo.com/v3/smtp/email", data=corps, method="POST",
         headers={"api-key": config.BREVO_API_KEY, "Content-Type": "application/json", "Accept": "application/json"},
     )
-    with urllib.request.urlopen(requete, timeout=15) as reponse:
-        return 200 <= reponse.status < 300
+    try:
+        with urllib.request.urlopen(requete, timeout=15) as reponse:
+            return 200 <= reponse.status < 300
+    except urllib.error.HTTPError as erreur:
+        # Brevo explique le refus dans le corps de la réponse (IP non autorisée, compte non
+        # activé, expéditeur non validé…). On l'écrit dans le journal, sans la clé API.
+        detail = erreur.read().decode("utf-8", errors="replace")[:500]
+        log.error("Brevo a refusé l'envoi à %s (HTTP %s) : %s", adresse, erreur.code, detail)
+        print(f"[TDSI] Brevo a refusé l'envoi (HTTP {erreur.code}) : {detail}", flush=True)
+        return False
 
 
 def envoyer_email(adresse: str | None, sujet: str, message: str) -> bool:
