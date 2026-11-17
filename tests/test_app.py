@@ -331,3 +331,24 @@ def test_import_emploi_du_temps_L3TDSI(client, db):
     assert db.get(Module, crypto.id).nom_enseignant == "Nafi Dione" and db.get(Module, crypto.id).enseignant_id == prof.id
     assert "Programmation orientée objet" in client.get("/admin/planning").text
     assert "Mathématique discrète" in client.get("/admin/emploi-du-temps-L3TDSI-S2.csv").text
+
+
+def test_import_xlsx_ignore_les_lignes_vides_du_modele(client, db):
+    import io
+
+    from openpyxl import Workbook
+
+    creer(db, nom="Admin", prenom="Test", role="admin", email="admin@test.sn")
+    connecter(client, "admin@test.sn")
+    wb = Workbook()
+    ws = wb.active
+    ws.append(["matricule", "nom", "prenom", "role", "email", "telephone", "classe"])
+    ws.append(["TDSI-L3-0101", "FALL", "Awa", "etudiant", "awa.fall@exemple.sn", "770000001", "L3 TDSI"])
+    ws.append(["TDSI-L3-0102", "SY", "Abdou", "etudiant", "abdou.sy@exemple.sn", None, "L3 TDSI"])
+    for _ in range(20):  # lignes du modèle non remplies
+        ws.append([None, None, None, "etudiant", None, None, "L3 TDSI"])
+    tampon = io.BytesIO()
+    wb.save(tampon)
+    r = client.post("/admin/import", files={"fichier": ("comptes.xlsx", tampon.getvalue(),
+                    "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")})
+    assert "2 compte(s) créé(s)" in r.text and "0 erreur(s)" in r.text

@@ -278,6 +278,9 @@ def envoyer_invitation(user: User) -> bool:
 def importer_utilisateurs(db: Session, lignes: list[dict], auteur: User) -> RapportImport:
     rapport = RapportImport()
     for i, data in enumerate(lignes, start=2):
+        # Ligne du modèle laissée vide (seuls le rôle et la classe sont pré-remplis) : on l'ignore.
+        if not any((data.get(cle) or "").strip() for cle in ("matricule", "nom", "prenom", "email")):
+            continue
         # Chaque ligne est enregistrée séparément : une ligne défectueuse n'arrête pas l'import.
         avant = (rapport.crees, rapport.mis_a_jour)
         try:

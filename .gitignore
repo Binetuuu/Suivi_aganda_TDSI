@@ -16,3 +16,6 @@ contacts*.csv
 env.prod.yaml
 .firebase/
 .claude/
+
+# Documents partagés avec la classe (peuvent contenir des données personnelles une fois remplis)
+partage/
