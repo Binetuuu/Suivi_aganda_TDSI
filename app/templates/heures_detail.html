@@ -1,0 +1,87 @@
+{% extends "base.html" %}
+{% block titre %}Détail des heures{% endblock %}
+{% block contenu %}
+{% set q = 'du=' ~ debut.isoformat() ~ '&au=' ~ fin.isoformat() %}
+<header class="entete">
+  <div>
+    <p class="surtitre">Du {{ debut | date_fr(False) }} au {{ fin | date_fr(False) }}</p>
+    <h1>{{ bilan.nom if bilan else 'Mes heures' }}</h1>
+  </div>
+  {% if admin %}<a class="bouton second" href="/admin/heures?{{ q }}">← Toutes les heures</a>{% endif %}
+</header>
+{% if not admin %}
+<form method="get" class="filtres" style="align-items:flex-end">
+  <div class="champ"><label for="du">Du</label><input id="du" name="du" type="date" value="{{ debut.isoformat() }}"></div>
+  <div class="champ"><label for="au">Au</label><input id="au" name="au" type="date" value="{{ fin.isoformat() }}"></div>
+  <button class="bouton second" type="submit">Afficher</button>
+</form>
+<div class="flash">Ces heures servent au calcul de votre paiement. Une séance est comptée quand l'administration a clôturé l'appel ou confirmé la séance. En cas d'erreur, contactez l'administration.</div>
+{% endif %}
+
+<section class="kpis">
+  <div class="kpi"><span>Heures faites</span><strong>{{ format_duree(bilan.minutes) if bilan else '0 h' }}</strong></div>
+  <div class="kpi"><span>Séances faites</span><strong>{{ bilan.effectuees if bilan else 0 }}</strong></div>
+  <div class="kpi"><span>Annulées</span><strong>{{ bilan.annulees if bilan else 0 }}</strong></div>
+  <div class="kpi"><span>À confirmer</span><strong style="color:var(--alerte)">{{ bilan.a_confirmer if bilan else 0 }}</strong></div>
+</section>
+
+<section class="carte" style="padding:8px">
+  <div class="tableau"><table style="min-width:900px">
+    <thead><tr><th>Date</th><th>Horaire</th><th>Module</th><th>Appel</th><th>Cahier</th><th>Statut</th><th>Durée comptée</th>{% if admin %}<th>Actions</th>{% endif %}</tr></thead>
+    <tbody>
+    {% for s in seances %}
+      {% set st = s.statut_effectif %}
+      <tr>
+        <td style="white-space:nowrap">{{ s.date | date_fr }}</td>
+        <td style="white-space:nowrap">{{ s.horaire }}</td>
+        <td>{{ s.module.nom }}<br><small class="vide">{{ s.module.code or '' }} {{ s.module.classe }}</small></td>
+        <td>{% if s.appel_statut == 'clos' %}<span class="pastille ok">Clôturé</span>{% elif s.appel_statut == 'ouvert' %}<span class="pastille info">Ouvert</span>{% else %}<span class="pastille">Non fait</span>{% endif %}</td>
+        <td>{% if s.cahier %}<span class="pastille ok">Rempli</span>{% else %}<span class="pastille">—</span>{% endif %}</td>
+        <td>
+          {% if st == 'effectuee' %}<span class="pastille ok">Faite</span>
+          {% elif st == 'annulee' %}<span class="pastille">Annulée</span>
+          {% elif s.date <= aujourdhui %}<span class="pastille alerte">À confirmer</span>
+          {% else %}<span class="pastille info">Prévue</span>{% endif %}
+          {% if s.motif %}<br><small class="vide">{{ s.motif }}</small>{% endif %}
+        </td>
+        <td style="white-space:nowrap">{% if st == 'effectuee' %}<strong>{{ format_duree(s.minutes_comptees) }}</strong>{% if s.duree_minutes is not none %}<br><small class="vide">prévu {{ format_duree(s.duree_prevue_minutes) }}</small>{% endif %}{% else %}—{% endif %}</td>
+        {% if admin %}
+        <td>
+          <div style="display:flex;flex-direction:column;gap:6px;min-width:240px">
+            {% if st != 'effectuee' %}
+            <form method="post" action="/admin/seances/{{ s.id }}/statut" style="display:flex;gap:6px;align-items:center">
+              <input type="hidden" name="statut" value="effectuee"><input type="hidden" name="retour" value="/admin/heures/detail?cle={{ cle | urlencode }}&{{ q }}">
+              <label class="sr" for="d-{{ s.id }}">Durée réelle</label>
+              <input id="d-{{ s.id }}" name="duree" type="text" placeholder="{{ format_duree(s.duree_prevue_minutes) | replace(' h ', ':') | replace(' h', ':00') }}" style="width:80px;min-height:36px">
+              <button class="bouton petit" type="submit">Confirmer faite</button>
+            </form>
+            {% else %}
+            <form method="post" action="/admin/seances/{{ s.id }}/statut" style="display:flex;gap:6px;align-items:center">
+              <input type="hidden" name="statut" value="effectuee"><input type="hidden" name="retour" value="/admin/heures/detail?cle={{ cle | urlencode }}&{{ q }}">
+              <label class="sr" for="d-{{ s.id }}">Corriger la durée</label>
+              <input id="d-{{ s.id }}" name="duree" type="text" required placeholder="ex. 2:30" style="width:80px;min-height:36px">
+              <button class="bouton second petit" type="submit">Corriger la durée</button>
+            </form>
+            {% endif %}
+            {% if st != 'annulee' %}
+            <form method="post" action="/admin/seances/{{ s.id }}/statut" style="display:flex;gap:6px;align-items:center">
+              <input type="hidden" name="statut" value="annulee"><input type="hidden" name="retour" value="/admin/heures/detail?cle={{ cle | urlencode }}&{{ q }}">
+              <label class="sr" for="m-{{ s.id }}">Motif de l'annulation</label>
+              <input id="m-{{ s.id }}" name="motif" type="text" placeholder="Motif (prof absent…)" style="min-height:36px">
+              <button class="bouton second petit" type="submit">Annuler</button>
+            </form>
+            {% else %}
+            <form method="post" action="/admin/seances/{{ s.id }}/statut" class="inline">
+              <input type="hidden" name="statut" value="prevue"><input type="hidden" name="retour" value="/admin/heures/detail?cle={{ cle | urlencode }}&{{ q }}">
+              <button class="lien-bouton" type="submit">Annuler l'annulation</button>
+            </form>
+            {% endif %}
+          </div>
+        </td>
+        {% endif %}
+      </tr>
+    {% else %}<tr><td colspan="8" class="vide">Aucune séance sur cette période.</td></tr>{% endfor %}
+    </tbody>
+  </table></div>
+</section>
+{% endblock %}

@@ -89,6 +89,12 @@ class Seance(Base):
     type: Mapped[str] = mapped_column(String(4), default="CM")
     # non_lance | ouvert | clos
     appel_statut: Mapped[str] = mapped_column(String(12), default="non_lance")
+    # Pour le paiement des enseignants : prevue | effectuee | annulee.
+    # Une séance devient « effectuee » quand l'appel est clôturé ou que l'administration la confirme.
+    statut: Mapped[str | None] = mapped_column(String(12), default="prevue")
+    # Durée réellement faite, si elle diffère de l'horaire prévu (retard, fin anticipée).
+    duree_minutes: Mapped[int | None] = mapped_column(Integer)
+    motif: Mapped[str | None] = mapped_column(String(200))
 
     module: Mapped[Module] = relationship()
     presences: Mapped[list["Presence"]] = relationship(back_populates="seance", cascade="all, delete-orphan")
@@ -97,6 +103,24 @@ class Seance(Base):
     @property
     def horaire(self) -> str:
         return f"{self.debut:%H:%M} – {self.fin:%H:%M}"
+
+    @property
+    def duree_prevue_minutes(self) -> int:
+        return (self.fin.hour * 60 + self.fin.minute) - (self.debut.hour * 60 + self.debut.minute)
+
+    @property
+    def minutes_comptees(self) -> int:
+        """Minutes payables : durée réelle si elle a été corrigée, sinon l'horaire prévu."""
+        return self.duree_minutes if self.duree_minutes is not None else self.duree_prevue_minutes
+
+    @property
+    def statut_effectif(self) -> str:
+        return self.statut or "prevue"
+
+
+def format_duree(minutes: int) -> str:
+    heures, reste = divmod(int(minutes), 60)
+    return f"{heures} h {reste:02d}" if reste else f"{heures} h"
 
 
 class Presence(Base):

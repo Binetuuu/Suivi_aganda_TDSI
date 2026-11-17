@@ -12,8 +12,8 @@
 {% block corps %}
 {% set menus = {
   'etudiant': [('/etudiant', 'accueil', 'Tableau de bord'), ('/etudiant/carte', 'carte', 'Ma carte QR'), ('/emploi-du-temps', 'agenda', 'Emploi du temps'), ('/cours', 'livre', 'Cours et supports'), ('/cahier', 'cahier', 'Cahier de texte'), ('/etudiant/absences', 'absence', 'Mes absences')],
-  'enseignant': [('/enseignant', 'accueil', 'Tableau de bord'), ('/emploi-du-temps', 'agenda', 'Emploi du temps'), ('/cours', 'livre', 'Cours et supports'), ('/cahier', 'cahier', 'Cahier de texte'), ('/suivi', 'stats', 'Suivi étudiants')],
-  'admin': [('/admin', 'console', 'Console admin'), ('/admin/appels', 'qr', 'Scanner les présences'), ('/admin/utilisateurs', 'personnes', 'Utilisateurs'), ('/admin/planning', 'agenda', 'Planning'), ('/suivi', 'stats', 'Suivi étudiants'), ('/cahier', 'cahier', 'Cahiers de texte'), ('/cours', 'livre', 'Supports de cours'), ('/emploi-du-temps', 'agenda', 'Emplois du temps'), ('/admin/journal', 'journal', 'Journal')]
+  'enseignant': [('/enseignant', 'accueil', 'Tableau de bord'), ('/emploi-du-temps', 'agenda', 'Emploi du temps'), ('/cours', 'livre', 'Cours et supports'), ('/cahier', 'cahier', 'Cahier de texte'), ('/enseignant/heures', 'absence', 'Mes heures'), ('/suivi', 'stats', 'Suivi étudiants')],
+  'admin': [('/admin', 'console', 'Console admin'), ('/admin/appels', 'qr', 'Scanner les présences'), ('/admin/utilisateurs', 'personnes', 'Utilisateurs'), ('/admin/planning', 'agenda', 'Planning'), ('/admin/heures', 'absence', 'Heures enseignants'), ('/suivi', 'stats', 'Suivi étudiants'), ('/cahier', 'cahier', 'Cahiers de texte'), ('/cours', 'livre', 'Supports de cours'), ('/emploi-du-temps', 'agenda', 'Emplois du temps'), ('/admin/journal', 'journal', 'Journal')]
 } %}
 <div class="app">
   <nav class="menu" aria-label="Navigation principale">

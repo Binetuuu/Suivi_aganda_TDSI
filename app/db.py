@@ -25,6 +25,7 @@ def get_db():
 _COLONNES_AJOUTEES = {
     "users": {"invitation_nonce": "VARCHAR(32)"},
     "modules": {"code": "VARCHAR(40)", "enseignant_nom": "VARCHAR(120)"},
+    "seances": {"statut": "VARCHAR(12) DEFAULT 'prevue'", "duree_minutes": "INTEGER", "motif": "VARCHAR(200)"},
 }
 
 
@@ -39,6 +40,9 @@ def _migrer() -> None:
             for nom, type_sql in colonnes.items():
                 if nom not in existantes:
                     connexion.execute(text(f"ALTER TABLE {table} ADD COLUMN {nom} {type_sql}"))
+                    if (table, nom) == ("seances", "statut"):
+                        # Les séances dont l'appel était déjà clôturé ont bien eu lieu.
+                        connexion.execute(text("UPDATE seances SET statut = 'effectuee' WHERE appel_statut = 'clos'"))
 
 
 def init_db() -> None:

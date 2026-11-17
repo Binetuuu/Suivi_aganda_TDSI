@@ -352,3 +352,57 @@ def test_import_xlsx_ignore_les_lignes_vides_du_modele(client, db):
     r = client.post("/admin/import", files={"fichier": ("comptes.xlsx", tampon.getvalue(),
                     "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")})
     assert "2 compte(s) créé(s)" in r.text and "0 erreur(s)" in r.text
+
+
+def test_heures_enseignants_pour_le_paiement(client, db):
+    import io
+    from datetime import timedelta
+
+    from openpyxl import load_workbook
+
+    prof, admin, e1, e2, autre, module, seance = _classe(db)  # séance du jour 08:00-10:00
+    hier = date.today() - timedelta(days=1)
+    s_hier = Seance(module_id=module.id, date=hier, debut=heure(14), fin=heure(17), type="TD")
+    s_annulee = Seance(module_id=module.id, date=hier, debut=heure(8), fin=heure(10), type="CM")
+    autre_module = Module(nom="Réseaux", classe="L3", enseignant_nom="M. Mbaye")  # enseignant sans compte
+    db.add_all([s_hier, s_annulee, autre_module])
+    db.flush()
+    s_mbaye = Seance(module_id=autre_module.id, date=hier, debut=heure(18), fin=heure(21), type="CM")
+    db.add(s_mbaye)
+    db.commit()
+    du, au = (date.today() - timedelta(days=2)).isoformat(), date.today().isoformat()
+    connecter(client, "admin@test.sn")
+
+    # 1. clôturer l'appel compte la séance (2 h)
+    client.post(f"/appel/{seance.id}/ouvrir")
+    client.post(f"/appel/{seance.id}/cloturer")
+    db.expire_all()
+    assert db.get(Seance, seance.id).statut == "effectuee"
+
+    # 2. confirmation manuelle avec durée réelle 2 h 30 au lieu de 3 h ; 3. annulation avec motif
+    client.post(f"/admin/seances/{s_hier.id}/statut", data={"statut": "effectuee", "duree": "2:30"})
+    client.post(f"/admin/seances/{s_annulee.id}/statut", data={"statut": "annulee", "motif": "Professeur absent"})
+    assert "Durée invalide" in client.post(f"/admin/seances/{s_mbaye.id}/statut",
+                                           data={"statut": "effectuee", "duree": "abc"}).text
+
+    page = client.get(f"/admin/heures?du={du}&au={au}").text
+    assert "Alpha Prof" in page and "4 h 30" in page   # 2 h + 2 h 30
+    assert "M. Mbaye" in page        # séance passée non confirmée → à confirmer, 0 h
+    detail = client.get(f"/admin/heures/detail?cle=u{prof.id}&du={du}&au={au}").text
+    assert "Professeur absent" in detail and "prévu 3 h" in detail
+
+    # 4. export Excel
+    r = client.get(f"/admin/heures/export.xlsx?du={du}&au={au}")
+    wb = load_workbook(io.BytesIO(r.content))
+    synthese = {row[0]: row for row in wb["Synthèse"].iter_rows(min_row=4, values_only=True)}
+    assert synthese["Alpha Prof"][1:3] == (2, 4.5)
+    assert synthese["M. Mbaye"][5] == 1           # 1 séance à confirmer
+    assert synthese["TOTAL"][2] == 4.5
+    assert wb["Détail des séances"].max_row == 5  # en-tête + 4 séances
+
+    # 5. l'enseignant voit ses heures mais ne peut pas les modifier
+    with TestClient(app) as p:
+        connecter(p, "prof@test.sn")
+        mes = p.get(f"/enseignant/heures?du={du}&au={au}").text
+        assert "4 h 30" in mes and "Confirmer faite" not in mes
+        assert p.post(f"/admin/seances/{s_mbaye.id}/statut", data={"statut": "effectuee"}).status_code == 403

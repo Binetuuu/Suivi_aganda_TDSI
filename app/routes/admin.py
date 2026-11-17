@@ -1,3 +1,4 @@
+import io
 import secrets
 from datetime import date, datetime, timedelta
 
@@ -7,12 +8,13 @@ from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
 from ..db import get_db
-from ..models import ROLES, TYPES_SEANCE, Journal, Module, Presence, Seance, User
+from ..models import ROLES, TYPES_SEANCE, Journal, Module, Presence, Seance, User, format_duree
 from ..security import masquer_telephone
 from ..services import (
     COLONNES_IMPORT, EMPLOI_DU_TEMPS_L3TDSI_S2, RapportImport, classes, creer_ou_maj_utilisateur, envoyer_invitation,
     importer_emploi_du_temps, importer_utilisateurs, preparer_lien,
     journaliser, lire_fichier_import, seances_sans_cahier, stats_etudiant, taux_global,
+    changer_statut_seance, cle_enseignant, heures_par_enseignant, seances_periode,
 )
 from ..web import flash, rediriger, rendre, exiger_role
 
@@ -298,3 +300,121 @@ def supprimer_seance(request: Request, seance_id: int, user: User = Depends(admi
 def journal(request: Request, user: User = Depends(admin_requis), db: Session = Depends(get_db)):
     lignes = list(db.scalars(select(Journal).order_by(Journal.at.desc()).limit(300)))
     return rendre(request, "admin_journal.html", user=user, lignes=lignes)
+
+
+# --- Heures des enseignants ----------------------------------------------------------
+
+def _periode(du: date | None, au: date | None) -> tuple[date, date]:
+    aujourdhui = date.today()
+    debut = du or aujourdhui.replace(day=1)
+    fin = au or (debut.replace(day=28) + timedelta(days=4)).replace(day=1) - timedelta(days=1)
+    return (debut, fin) if debut <= fin else (fin, debut)
+
+
+def _raccourcis_periode() -> list[tuple[str, date, date]]:
+    aujourdhui = date.today()
+    debut_mois = aujourdhui.replace(day=1)
+    fin_mois = (debut_mois.replace(day=28) + timedelta(days=4)).replace(day=1) - timedelta(days=1)
+    fin_mois_dernier = debut_mois - timedelta(days=1)
+    return [("Ce mois-ci", debut_mois, fin_mois), ("Mois dernier", fin_mois_dernier.replace(day=1), fin_mois_dernier)]
+
+
+@router.get("/heures")
+def heures(request: Request, du: date | None = None, au: date | None = None,
+           user: User = Depends(admin_requis), db: Session = Depends(get_db)):
+    debut, fin = _periode(du, au)
+    lignes = heures_par_enseignant(db, debut, fin)
+    return rendre(request, "admin_heures.html", user=user, lignes=lignes, debut=debut, fin=fin,
+                  total=sum(l.minutes for l in lignes), a_confirmer=sum(l.a_confirmer for l in lignes),
+                  raccourcis=_raccourcis_periode(), format_duree=format_duree)
+
+
+@router.get("/heures/detail")
+def heures_detail(request: Request, cle: str, du: date | None = None, au: date | None = None,
+                  user: User = Depends(admin_requis), db: Session = Depends(get_db)):
+    debut, fin = _periode(du, au)
+    seances = seances_periode(db, debut, fin, cle=cle)
+    lignes = [l for l in heures_par_enseignant(db, debut, fin) if l.cle == cle]
+    return rendre(request, "heures_detail.html", user=user, seances=seances, bilan=lignes[0] if lignes else None,
+                  debut=debut, fin=fin, cle=cle, format_duree=format_duree, aujourdhui=date.today(), admin=True)
+
+
+@router.post("/seances/{seance_id}/statut")
+def statut_seance(
+    request: Request, seance_id: int, statut: str = Form(...), motif: str = Form(""),
+    duree: str = Form(""), retour: str = Form("/admin/heures"),
+    user: User = Depends(admin_requis), db: Session = Depends(get_db),
+):
+    seance = db.get(Seance, seance_id)
+    if seance is None:
+        raise HTTPException(404, "Séance introuvable.")
+    duree_minutes = None
+    if duree.strip():
+        try:
+            h, _, m = duree.strip().replace("h", ":").partition(":")
+            duree_minutes = int(h or 0) * 60 + int(m or 0)
+        except ValueError:
+            duree_minutes = -1
+        if not 0 < duree_minutes <= 12 * 60:
+            flash(request, "Durée invalide : écrivez par exemple 2:30 pour 2 h 30.", "erreur")
+            return rediriger(retour if retour.startswith("/") else "/admin/heures")
+    try:
+        changer_statut_seance(db, seance, statut, user, motif, duree_minutes)
+    except ValueError:
+        raise HTTPException(400, "Statut inconnu.")
+    libelle = {"effectuee": "confirmée (heures comptées)", "annulee": "annulée (non comptée)", "prevue": "remise à confirmer"}[statut]
+    flash(request, f"{seance.module.nom} du {seance.date:%d/%m} : séance {libelle}.")
+    return rediriger(retour if retour.startswith("/") and not retour.startswith("//") else "/admin/heures")
+
+
+@router.get("/heures/export.xlsx")
+def export_heures(du: date | None = None, au: date | None = None,
+                  user: User = Depends(admin_requis), db: Session = Depends(get_db)):
+    from openpyxl import Workbook
+    from openpyxl.styles import Font, PatternFill
+
+    debut, fin = _periode(du, au)
+    lignes = heures_par_enseignant(db, debut, fin)
+    wb = Workbook()
+    ws = wb.active
+    ws.title = "Synthèse"
+    ws.append([f"Heures d'enseignement du {debut:%d/%m/%Y} au {fin:%d/%m/%Y}"])
+    ws["A1"].font = Font(bold=True, size=13)
+    ws.append([])
+    entetes = ["Enseignant", "Séances faites", "Heures faites", "Durée (h min)", "Séances annulées", "À confirmer"]
+    ws.append(entetes)
+    for l in lignes:
+        ws.append([l.nom, l.effectuees, l.heures, format_duree(l.minutes), l.annulees, l.a_confirmer])
+    ws.append(["TOTAL", sum(l.effectuees for l in lignes), round(sum(l.minutes for l in lignes) / 60, 2),
+               format_duree(sum(l.minutes for l in lignes)), sum(l.annulees for l in lignes), sum(l.a_confirmer for l in lignes)])
+    for cellule in ws[3]:
+        cellule.font = Font(bold=True, color="FFFFFF")
+        cellule.fill = PatternFill("solid", fgColor="2557D6")
+    for cellule in ws[ws.max_row]:
+        cellule.font = Font(bold=True)
+    for lettre, largeur in zip("ABCDEF", [34, 15, 14, 15, 17, 13]):
+        ws.column_dimensions[lettre].width = largeur
+
+    detail = wb.create_sheet("Détail des séances")
+    detail.append(["Enseignant", "Date", "Horaire", "UE", "Module", "Classe", "Type", "Statut", "Durée comptée (h)", "Appel", "Cahier de texte", "Motif"])
+    for cellule in detail[1]:
+        cellule.font = Font(bold=True, color="FFFFFF")
+        cellule.fill = PatternFill("solid", fgColor="2557D6")
+    libelles = {"effectuee": "Faite", "annulee": "Annulée", "prevue": "À confirmer"}
+    for s in seances_periode(db, debut, fin):
+        statut = s.statut_effectif
+        detail.append([
+            cle_enseignant(s.module)[1], s.date, s.horaire, s.module.code or "", s.module.nom, s.module.classe, s.type,
+            libelles[statut] if statut != "prevue" or s.date <= date.today() else "Prévue",
+            round(s.minutes_comptees / 60, 2) if statut == "effectuee" else 0,
+            "Clôturé" if s.appel_statut == "clos" else ("Ouvert" if s.appel_statut == "ouvert" else "Non fait"),
+            "Rempli" if s.cahier else "Non rempli", s.motif or "",
+        ])
+        detail.cell(row=detail.max_row, column=2).number_format = "DD/MM/YYYY"
+    for lettre, largeur in zip("ABCDEFGHIJKL", [30, 12, 15, 20, 40, 10, 7, 13, 17, 10, 15, 30]):
+        detail.column_dimensions[lettre].width = largeur
+    tampon = io.BytesIO()
+    wb.save(tampon)
+    nom = f"heures_enseignants_{debut:%Y-%m-%d}_{fin:%Y-%m-%d}.xlsx"
+    return Response(tampon.getvalue(), media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+                    headers={"Content-Disposition": f"attachment; filename={nom}"})

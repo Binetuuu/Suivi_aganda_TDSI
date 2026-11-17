@@ -1,0 +1,43 @@
+{% extends "base.html" %}
+{% block titre %}Heures des enseignants{% endblock %}
+{% block contenu %}
+<header class="entete">
+  <div><p class="surtitre">Base du paiement · du {{ debut | date_fr(False) }} au {{ fin | date_fr(False) }}</p><h1>Heures des enseignants</h1></div>
+  <a class="bouton" href="/admin/heures/export.xlsx?du={{ debut.isoformat() }}&au={{ fin.isoformat() }}">{{ icone('telecharger') }}Exporter en Excel</a>
+</header>
+
+<form method="get" class="filtres" style="align-items:flex-end">
+  {% for libelle, d, f in raccourcis %}<a class="puce {{ 'actif' if d == debut and f == fin }}" href="?du={{ d.isoformat() }}&au={{ f.isoformat() }}">{{ libelle }}</a>{% endfor %}
+  <div class="champ"><label for="du">Du</label><input id="du" name="du" type="date" value="{{ debut.isoformat() }}"></div>
+  <div class="champ"><label for="au">Au</label><input id="au" name="au" type="date" value="{{ fin.isoformat() }}"></div>
+  <button class="bouton second" type="submit">Afficher</button>
+</form>
+
+<div class="flash">Une séance est comptée quand l'appel est <strong>clôturé</strong> ou que vous la <strong>confirmez</strong>. Les séances annulées ne sont pas comptées. Vous pouvez corriger la durée réelle dans le détail.</div>
+{% if a_confirmer %}<div class="flash erreur">{{ a_confirmer }} séance(s) passée(s) sans appel clôturé : ouvrez le détail de l'enseignant pour les confirmer ou les annuler, sinon elles ne sont pas payées.</div>{% endif %}
+
+<section class="kpis">
+  <div class="kpi"><span>Heures faites (total)</span><strong>{{ format_duree(total) }}</strong></div>
+  <div class="kpi"><span>Enseignants</span><strong>{{ lignes | length }}</strong></div>
+  <div class="kpi"><span>À confirmer</span><strong style="color:var(--alerte)">{{ a_confirmer }}</strong></div>
+</section>
+
+<section class="carte" style="padding:8px">
+  <div class="tableau"><table>
+    <thead><tr><th>Enseignant</th><th>Séances faites</th><th>Heures faites</th><th>Par UE</th><th>Annulées</th><th>À confirmer</th><th></th></tr></thead>
+    <tbody>
+    {% for l in lignes %}
+      <tr>
+        <td><strong>{{ l.nom }}</strong>{% if not l.cle.startswith('u') %}<br><small class="vide">pas de compte relié</small>{% endif %}</td>
+        <td>{{ l.effectuees }}</td>
+        <td><strong>{{ format_duree(l.minutes) }}</strong></td>
+        <td style="font-size:13px">{% for module, minutes in l.par_module.items() %}{{ module }} : {{ format_duree(minutes) }}{% if not loop.last %}<br>{% endif %}{% else %}—{% endfor %}</td>
+        <td>{{ l.annulees }}</td>
+        <td>{% if l.a_confirmer %}<span class="pastille alerte">{{ l.a_confirmer }}</span>{% else %}0{% endif %}</td>
+        <td><a href="/admin/heures/detail?cle={{ l.cle | urlencode }}&du={{ debut.isoformat() }}&au={{ fin.isoformat() }}">Détail</a></td>
+      </tr>
+    {% else %}<tr><td colspan="7" class="vide">Aucune séance sur cette période.</td></tr>{% endfor %}
+    </tbody>
+  </table></div>
+</section>
+{% endblock %}

@@ -8,6 +8,7 @@ Application web pour une classe de TDSI :
 - **Cahier de texte numérique**, rempli par l'enseignant et validé par le délégué.
 - **Emploi du temps**, **supports de cours** (dépôt et téléchargement), **absences et justificatifs**.
 - **Suivi individuel** : taux de présence global et par module, alerte sous 85 %.
+- **Heures des enseignants** (base du paiement) : une séance est comptée quand l'appel est clôturé ou que l'admin la confirme ; annulation avec motif, correction de la durée réelle, état par enseignant et par UE sur une période, export Excel. Chaque enseignant consulte ses heures (« Mes heures ») sans pouvoir les modifier.
 - **Console admin** : chiffres du jour, appels en direct, alertes, justificatifs, import des comptes, planning et journal d'activité.
 
 Technique : Python 3.11+, FastAPI, SQLAlchemy (SQLite par défaut), gabarits Jinja2.

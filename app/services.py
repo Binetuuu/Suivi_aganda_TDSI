@@ -393,3 +393,82 @@ def importer_emploi_du_temps(db: Session, lignes: list[dict], debut: date, fin: 
                 f"{rapport.modules_crees} module(s), {rapport.seances_creees} séance(s) du {debut:%d/%m/%Y} au {fin:%d/%m/%Y}")
     db.commit()
     return rapport
+
+
+# --- Heures des enseignants (base du paiement) -----------------------------------
+
+@dataclass
+class HeuresEnseignant:
+    cle: str
+    nom: str
+    email: str | None = None
+    minutes: int = 0
+    effectuees: int = 0
+    annulees: int = 0
+    a_confirmer: int = 0
+    prevues: int = 0
+    par_module: dict[str, int] = field(default_factory=dict)  # « code · nom » -> minutes faites
+
+    @property
+    def heures(self) -> float:
+        return round(self.minutes / 60, 2)
+
+
+def cle_enseignant(module: Module) -> tuple[str, str]:
+    """Identifie l'enseignant d'un module : son compte s'il est relié, sinon le nom de l'emploi du temps."""
+    if module.enseignant_id:
+        return f"u{module.enseignant_id}", module.enseignant.nom_complet
+    if module.enseignant_nom:
+        return f"n:{module.enseignant_nom}", module.enseignant_nom
+    return "x", "Enseignant non renseigné"
+
+
+def seances_periode(db: Session, debut: date, fin: date, cle: str | None = None,
+                    enseignant_id: int | None = None) -> list[Seance]:
+    q = select(Seance).join(Module).where(Seance.date >= debut, Seance.date <= fin).order_by(Seance.date, Seance.debut)
+    if enseignant_id is not None:
+        q = q.where(Module.enseignant_id == enseignant_id)
+    seances = list(db.scalars(q))
+    if cle is not None:
+        seances = [s for s in seances if cle_enseignant(s.module)[0] == cle]
+    return seances
+
+
+def heures_par_enseignant(db: Session, debut: date, fin: date, enseignant_id: int | None = None) -> list[HeuresEnseignant]:
+    """Additionne, par enseignant, les séances faites (statut « effectuee ») entre deux dates.
+    Les séances passées encore « prévues » sont signalées « à confirmer » : elles ne sont pas payées
+    tant que l'administration ne les a pas confirmées (ou clôturé l'appel)."""
+    aujourdhui = date.today()
+    bilan: dict[str, HeuresEnseignant] = {}
+    for s in seances_periode(db, debut, fin, enseignant_id=enseignant_id):
+        cle, nom = cle_enseignant(s.module)
+        ligne = bilan.setdefault(cle, HeuresEnseignant(cle=cle, nom=nom,
+                                 email=s.module.enseignant.email if s.module.enseignant else None))
+        statut = s.statut_effectif
+        if statut == "effectuee":
+            ligne.effectuees += 1
+            ligne.minutes += s.minutes_comptees
+            module = f"{s.module.code} · {s.module.nom}" if s.module.code else s.module.nom
+            ligne.par_module[module] = ligne.par_module.get(module, 0) + s.minutes_comptees
+        elif statut == "annulee":
+            ligne.annulees += 1
+        elif s.date <= aujourdhui:
+            ligne.a_confirmer += 1
+        else:
+            ligne.prevues += 1
+    return sorted(bilan.values(), key=lambda h: h.nom.lower())
+
+
+def changer_statut_seance(db: Session, seance: Seance, statut: str, auteur: User,
+                          motif: str = "", duree_minutes: int | None = None) -> None:
+    if statut not in ("prevue", "effectuee", "annulee"):
+        raise ValueError("statut inconnu")
+    ancien = seance.statut_effectif
+    seance.statut = statut
+    seance.motif = (motif or "").strip()[:200] or None
+    if duree_minutes is not None:
+        seance.duree_minutes = duree_minutes if duree_minutes != seance.duree_prevue_minutes else None
+    journaliser(db, auteur, "heures", f"{seance.module.nom} du {seance.date:%d/%m/%Y} : {ancien} → {statut}"
+                + (f", durée {seance.minutes_comptees} min" if statut == "effectuee" else "")
+                + (f" ({seance.motif})" if seance.motif else ""))
+    db.commit()

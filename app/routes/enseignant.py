@@ -1,4 +1,4 @@
-from datetime import date, datetime
+from datetime import date, datetime, timedelta
 
 from fastapi import APIRouter, Depends, Form, HTTPException, Request
 from pydantic import BaseModel
@@ -6,10 +6,10 @@ from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from ..db import get_db
-from ..models import CahierEntry, Module, Presence, Seance, User
+from ..models import CahierEntry, Module, Presence, Seance, User, format_duree
 from ..notifications import notifier
 from ..security import lire_qr_token
-from ..services import etudiants_de_classe, journaliser, seances_sans_cahier
+from ..services import etudiants_de_classe, heures_par_enseignant, journaliser, seances_periode, seances_sans_cahier
 from ..web import exiger_role, flash, rediriger, rendre
 
 router = APIRouter()
@@ -96,6 +96,8 @@ def cloturer(request: Request, seance_id: int, user: User = Depends(admin_seul),
     for e in absents:
         db.add(Presence(seance_id=seance.id, etudiant_id=e.id, statut="absent", via="auto"))
     seance.appel_statut = "clos"
+    if seance.statut_effectif != "annulee":
+        seance.statut = "effectuee"  # l'appel clôturé prouve que le cours a eu lieu : heures comptées
     total_absents = len(absents) + sum(1 for p in seance.presences if p.statut == "absent")
     journaliser(db, user, "appel_clos", f"{seance.module.nom} ({seance.module.classe}) du {seance.date:%d/%m} : {total_absents} absent(s)")
     db.commit()
@@ -194,3 +196,17 @@ def remplir(
     db.commit()
     flash(request, "Séance enregistrée dans le cahier de texte.")
     return rediriger("/cahier")
+
+
+@router.get("/enseignant/heures")
+def mes_heures(request: Request, du: date | None = None, au: date | None = None,
+               user: User = Depends(exiger_role("enseignant")), db: Session = Depends(get_db)):
+    """Consultation seule : l'enseignant voit ses heures comptées, l'administration les valide."""
+    debut = du or date.today().replace(day=1)
+    fin = au or (debut.replace(day=28) + timedelta(days=4)).replace(day=1) - timedelta(days=1)
+    if fin < debut:
+        debut, fin = fin, debut
+    bilans = heures_par_enseignant(db, debut, fin, enseignant_id=user.id)
+    seances = seances_periode(db, debut, fin, enseignant_id=user.id)
+    return rendre(request, "heures_detail.html", user=user, seances=seances, bilan=bilans[0] if bilans else None,
+                  debut=debut, fin=fin, cle=f"u{user.id}", format_duree=format_duree, aujourdhui=date.today(), admin=False)
