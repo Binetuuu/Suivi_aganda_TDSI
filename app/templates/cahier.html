@@ -1,0 +1,40 @@
+{% extends "base.html" %}
+{% block titre %}Cahier de texte{% endblock %}
+{% block contenu %}
+<header><p class="surtitre">Fini le cahier papier</p><h1>Cahier de texte numérique</h1></header>
+{% if a_remplir %}
+<section class="carte">
+  <h2>Séances à renseigner</h2>
+  {% for s in a_remplir %}
+  <div class="item">
+    <div class="heure">{{ s.date.strftime('%d/%m') }}</div>
+    <div class="corps"><strong>{{ s.module.nom }}</strong><small>{{ s.module.classe }} · {{ s.type }} · {{ s.horaire }}</small></div>
+    <a class="bouton petit" href="/cahier/{{ s.id }}/remplir">Remplir</a>
+  </div>
+  {% endfor %}
+</section>
+{% endif %}
+<section class="liste">
+  <h2>Séances enregistrées ({{ entrees | length }})</h2>
+  {% for e in entrees %}
+  <article class="carte">
+    <div class="titre-ligne">
+      <span style="font-size:13px;font-weight:600;color:var(--accent)">{{ e.seance.module.nom }} · {{ e.seance.type }} · {{ e.seance.date | date_fr }}{% if user.role != 'etudiant' %} · {{ e.seance.module.classe }}{% endif %}</span>
+      {% if e.valide_par %}<span class="pastille ok">Validé par {{ e.valide_par.nom_complet }}</span>{% else %}<span class="pastille alerte">En attente de validation</span>{% endif %}
+    </div>
+    <h3>{{ e.titre }}</h3>
+    {% if e.contenu %}<p style="margin:0;white-space:pre-line;color:var(--texte)">{{ e.contenu }}</p>{% endif %}
+    {% if e.devoir %}<p style="margin:0;font-size:14px"><strong>À faire :</strong> {{ e.devoir }}</p>{% endif %}
+    <div class="titre-ligne">
+      <small class="vide">Rédigé par {{ e.auteur.nom_complet }} · présents {{ e.seance.presences | selectattr('statut', 'equalto', 'present') | list | length }}</small>
+      <div style="display:flex;gap:10px">
+        {% if user.role == 'admin' or (user.role == 'enseignant' and e.seance.module.enseignant_id == user.id) %}<a class="bouton second petit" href="/cahier/{{ e.seance_id }}/remplir">Modifier</a>{% endif %}
+        {% if not e.valide_par and (user.role == 'admin' or (user.delegue and user.classe == e.seance.module.classe)) %}
+        <form method="post" action="/cahier/entree/{{ e.id }}/valider" class="inline"><button class="bouton petit" type="submit">Valider (délégué)</button></form>
+        {% endif %}
+      </div>
+    </div>
+  </article>
+  {% else %}<div class="carte"><p class="vide">Aucune séance enregistrée.</p></div>{% endfor %}
+</section>
+{% endblock %}

@@ -1,0 +1,27 @@
+{% extends "base.html" %}
+{% block titre %}Ma carte QR{% endblock %}
+{% block corps %}
+<div class="mobile">
+  <div class="mobile-tete">
+    <a href="/etudiant" aria-label="Retour au tableau de bord">{{ icone('retour', 20) }}</a>
+    <strong style="font-family:var(--titre);font-size:17px">Ma carte TDSI</strong>
+    <span class="logo" style="width:44px;height:44px;flex-basis:44px">TDSI</span>
+  </div>
+  <section class="badge">
+    <div class="carte-nom">
+      <strong>{{ user.prenom }} {{ user.nom | upper }}</strong>
+      <span>{{ user.classe }}</span>
+    </div>
+    <div class="qr" role="img" aria-label="QR code de présence de {{ user.nom_complet }}">{{ qr | safe }}</div>
+    <div>
+      <div style="font-size:12px;font-weight:600;color:var(--doux);letter-spacing:1px;text-align:center">MATRICULE</div>
+      <div class="matricule">{{ user.matricule }}</div>
+    </div>
+  </section>
+  <section class="statut-seance">
+    <small style="color:#A9B4C8;font-weight:600">Présence du jour</small>
+    <div style="font-weight:600;margin-top:4px">{{ statut or "Aucune présence enregistrée aujourd'hui." }}</div>
+  </section>
+  <p style="font-size:12px;color:#A9B4C8;text-align:center;margin:0">Présentez cette carte à la responsable au début du cours. Elle est personnelle : ne la partagez pas. En cas de perte, demandez une nouvelle carte à l'administration.</p>
+</div>
+{% endblock %}

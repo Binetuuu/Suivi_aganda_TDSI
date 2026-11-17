@@ -1,0 +1,26 @@
+{% extends "base.html" %}
+{% block corps %}
+<div class="porte">
+  <div class="porte-pile">
+    <span class="couche couche-a" aria-hidden="true"></span>
+    <span class="couche couche-b" aria-hidden="true"></span>
+    <main class="porte-carte">
+      <header class="porte-logo">
+        <a href="/" class="porte-marque" aria-label="TDSI Campus, accueil">
+          {{ bouclier(64) }}
+          <span><strong>TDSI</strong><small>Transmission de Données et<br>Sécurité de l'Information</small></span>
+        </a>
+      </header>
+      <div class="porte-corps">
+        {% for m in messages %}<div class="flash {{ 'erreur' if m.niveau == 'erreur' }}" role="status">{{ m.message }}</div>{% endfor %}
+        {% block public %}{% endblock %}
+      </div>
+      <footer class="porte-pied">
+        <span>{{ icone('cadenas', 14) }} Connexion chiffrée · accès réservé</span>
+        <span>© {{ annee }} TDSI. Tous droits réservés.</span>
+      </footer>
+    </main>
+  </div>
+</div>
+{% endblock %}
+{% block scripts %}<script src="/static/public.js"></script>{% endblock %}

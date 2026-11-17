@@ -1,0 +1,72 @@
+{% extends "base.html" %}
+{% block titre %}Utilisateurs{% endblock %}
+{% block contenu %}
+<header><p class="surtitre">{{ utilisateurs | length }} compte(s)</p><h1>Utilisateurs</h1></header>
+
+{% if rapport %}
+<div class="flash {{ 'erreur' if rapport.erreurs }}" role="status">
+  Import terminé : {{ rapport.crees }} compte(s) créé(s) (invitations envoyées), {{ rapport.mis_a_jour }} mis à jour, {{ rapport.erreurs | length }} erreur(s).
+  {% if rapport.erreurs %}<ul style="margin:8px 0 0;padding-left:18px">{% for e in rapport.erreurs %}<li>{{ e }}</li>{% endfor %}</ul>{% endif %}
+</div>
+{% endif %}
+
+<div class="rangee">
+  <form method="post" action="/admin/import" enctype="multipart/form-data" class="carte pointillee formulaire large">
+    <h2 style="font-size:18px">Importer étudiants et enseignants</h2>
+    <p class="vide" style="font-size:14px">Fichier Excel (.xlsx) ou CSV avec les colonnes : <strong>matricule, nom, prenom, role, email, telephone, classe</strong>.
+      Chaque nouveau compte reçoit par e-mail un lien personnel pour activer son compte et choisir son mot de passe (l’e-mail est donc obligatoire). Un compte existant (même matricule, e-mail ou téléphone) est mis à jour.</p>
+    <div class="champ"><label for="fichier">Fichier</label><input id="fichier" name="fichier" type="file" accept=".csv,.xlsx" required></div>
+    <div style="display:flex;gap:10px;flex-wrap:wrap"><button class="bouton" type="submit">Importer</button><a class="bouton second" href="/admin/modele-import.csv">Télécharger le modèle</a></div>
+  </form>
+  <details class="carte">
+    <summary style="cursor:pointer;font-weight:600;min-height:32px">Ajouter un compte à la main</summary>
+    <form method="post" action="/admin/utilisateurs/ajouter" class="formulaire" style="margin-top:12px">
+      <div class="deux-col">
+        <div class="champ"><label for="a-prenom">Prénom</label><input id="a-prenom" name="prenom" type="text" required></div>
+        <div class="champ"><label for="a-nom">Nom</label><input id="a-nom" name="nom" type="text" required></div>
+        <div class="champ"><label for="a-role">Rôle</label><select id="a-role" name="role"><option value="etudiant">Étudiant</option><option value="enseignant">Enseignant</option><option value="admin">Administration</option></select></div>
+        <div class="champ"><label for="a-mat">Matricule (étudiant)</label><input id="a-mat" name="matricule" type="text"></div>
+        <div class="champ"><label for="a-classe">Classe (étudiant)</label><input id="a-classe" name="classe" type="text" list="liste-classes"></div>
+        <div class="champ"><label for="a-email">E-mail</label><input id="a-email" name="email" type="email"></div>
+        <div class="champ"><label for="a-tel">Téléphone</label><input id="a-tel" name="telephone" type="text"></div>
+      </div>
+      <datalist id="liste-classes">{% for c in classes %}<option value="{{ c }}">{% endfor %}</datalist>
+      <div><button class="bouton" type="submit">Créer et envoyer l'invitation</button></div>
+    </form>
+  </details>
+</div>
+
+<form method="get" class="filtres" style="align-items:flex-end">
+  <div class="champ"><label for="f-q">Rechercher</label><input id="f-q" name="q" type="search" value="{{ q }}" placeholder="Nom, matricule, e-mail"></div>
+  <div class="champ"><label for="f-role">Rôle</label><select id="f-role" name="role"><option value="">Tous</option>
+    {% for r, l in [('etudiant', 'Étudiants'), ('enseignant', 'Enseignants'), ('admin', 'Administration')] %}<option value="{{ r }}" {{ 'selected' if role == r }}>{{ l }}</option>{% endfor %}</select></div>
+  <div class="champ"><label for="f-classe">Classe</label><select id="f-classe" name="classe"><option value="">Toutes</option>
+    {% for c in classes %}<option {{ 'selected' if classe == c }}>{{ c }}</option>{% endfor %}</select></div>
+  <button class="bouton second" type="submit">Filtrer</button>
+</form>
+
+<section class="carte" style="padding:8px">
+  <div class="tableau"><table style="min-width:980px">
+    <thead><tr><th>Matricule</th><th>Nom</th><th>Rôle</th><th>Classe</th><th>E-mail</th><th>Téléphone</th><th>Compte</th><th>Actions</th></tr></thead>
+    <tbody>
+    {% for u in utilisateurs %}
+      <tr>
+        <td><strong>{{ u.matricule or '—' }}</strong></td>
+        <td>{{ u.nom_complet }}{% if u.delegue %} <span class="pastille info">Délégué</span>{% endif %}</td>
+        <td>{{ u.role_libelle }}</td><td>{{ u.classe or '—' }}</td>
+        <td>{{ u.email or '—' }}</td><td>{{ masquer(u.telephone) }}</td>
+        <td>{% if not u.actif %}<span class="pastille">Désactivé</span>{% elif not u.compte_active %}<span class="pastille alerte">Invitation envoyée</span>{% elif u.derniere_connexion %}<span class="pastille ok">Activé</span>{% else %}<span class="pastille info">Mot de passe choisi</span>{% endif %}</td>
+        <td><div class="actions">
+          <form method="post" action="/admin/utilisateurs/{{ u.id }}/renvoyer" class="inline"><button class="lien-bouton" type="submit">{{ 'Renvoyer le lien' if u.compte_active else 'Renvoyer l’invitation' }}</button></form>
+          {% if u.role == 'etudiant' %}
+          <form method="post" action="/admin/utilisateurs/{{ u.id }}/delegue" class="inline"><button class="lien-bouton" type="submit">{{ 'Retirer délégué' if u.delegue else 'Nommer délégué' }}</button></form>
+          <form method="post" action="/admin/utilisateurs/{{ u.id }}/nouveau-qr" class="inline"><button class="lien-bouton" type="submit">Nouveau QR</button></form>
+          {% endif %}
+          {% if u.id != user.id %}<form method="post" action="/admin/utilisateurs/{{ u.id }}/activer" class="inline"><button class="lien-bouton" type="submit">{{ 'Désactiver' if u.actif else 'Réactiver' }}</button></form>{% endif %}
+        </div></td>
+      </tr>
+    {% else %}<tr><td colspan="8" class="vide">Aucun compte. Importez votre liste pour commencer.</td></tr>{% endfor %}
+    </tbody></table></div>
+  <p class="vide" style="font-size:12px;margin:8px 12px">Les numéros sont masqués à l'écran. Ces coordonnées ne servent qu'à la connexion et aux notifications.</p>
+</section>
+{% endblock %}

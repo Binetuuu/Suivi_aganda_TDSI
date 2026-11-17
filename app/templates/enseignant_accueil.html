@@ -1,0 +1,33 @@
+{% extends "base.html" %}
+{% block titre %}Tableau de bord{% endblock %}
+{% block contenu %}
+<header><p class="surtitre">{{ aujourdhui | date_fr }}</p><h1>Bonjour {{ user.prenom }}</h1></header>
+<section class="carte">
+  <h2>Mes séances d'aujourd'hui</h2>
+  {% for s in du_jour %}
+  <div class="item">
+    <div class="heure">{{ s.horaire }}</div>
+    <div class="corps"><strong>{{ s.module.nom }}</strong><small>{{ s.module.classe }} · {{ s.type }} · {{ s.salle or 'Salle à définir' }}</small></div>
+    {% set etats = {'non_lance': ('Appel pas encore fait', ''), 'ouvert': ('Appel en cours', 'info'), 'clos': ('Appel clôturé', 'ok')} %}
+    <span class="pastille {{ etats[s.appel_statut][1] }}">{{ etats[s.appel_statut][0] }}</span>
+    <a class="bouton second petit" href="/cahier/{{ s.id }}/remplir">Cahier</a>
+  </div>
+  {% else %}<p class="vide">Pas de séance aujourd'hui.</p>{% endfor %}
+</section>
+<div class="rangee">
+  <section class="carte">
+    <h2>À venir</h2>
+    {% for s in a_venir %}
+    <div class="item"><div class="heure">{{ s.date.strftime('%d/%m') }}<br>{{ s.debut.strftime('%H:%M') }}</div>
+      <div class="corps"><strong>{{ s.module.nom }}</strong><small>{{ s.module.classe }} · {{ s.type }} · {{ s.salle or '—' }}</small></div></div>
+    {% else %}<p class="vide">Aucune séance programmée.</p>{% endfor %}
+  </section>
+  <section class="carte">
+    <h2>Cahier de texte en retard</h2>
+    {% for s in sans_cahier %}
+    <div class="item"><div class="corps"><strong>{{ s.module.nom }}</strong><small>{{ s.date | date_fr }} · {{ s.module.classe }}</small></div>
+      <a class="bouton petit" href="/cahier/{{ s.id }}/remplir">Remplir</a></div>
+    {% else %}<p class="vide">Tout est à jour.</p>{% endfor %}
+  </section>
+</div>
+{% endblock %}

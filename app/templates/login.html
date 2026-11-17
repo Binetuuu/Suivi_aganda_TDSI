@@ -1,0 +1,28 @@
+{% extends "_public.html" %}
+{% block titre %}Connexion{% endblock %}
+{% block public %}
+<div class="porte-titre">
+  <p>Bienvenue sur</p>
+  <h1 class="porte-nom">Plateforme de suivi de cours TDSI</h1>
+  <h2>Se connecter</h2>
+</div>
+{% if erreur %}<div class="flash erreur" role="alert">{{ erreur }}</div>{% endif %}
+<form method="post" action="/login" class="formulaire">
+  <div class="champ">
+    <label for="identifiant">Login</label>
+    <div class="saisie">{{ icone('utilisateur', 18) }}
+      <input id="identifiant" name="identifiant" type="text" required autocomplete="username" value="{{ identifiant or '' }}" placeholder="Matricule ou e-mail">
+    </div>
+  </div>
+  <div class="champ">
+    <label for="mot_de_passe">Mot de passe</label>
+    <div class="saisie">{{ icone('cadenas', 18) }}
+      <input id="mot_de_passe" name="mot_de_passe" type="password" required autocomplete="current-password" placeholder="Mot de passe">
+      <button type="button" class="oeil" data-oeil="mot_de_passe" aria-label="Afficher le mot de passe">{{ icone('oeil', 18) }}</button>
+    </div>
+  </div>
+  <a class="lien-oubli" href="/mot-de-passe-oublie">Mot de passe oublié ?</a>
+  <button class="bouton plein" type="submit">Se connecter</button>
+  <a class="bouton plein secondaire" href="/activer">{{ icone('ajout', 18) }}Activer mon compte</a>
+</form>
+{% endblock %}

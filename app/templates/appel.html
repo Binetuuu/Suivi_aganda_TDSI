@@ -1,0 +1,67 @@
+{% extends "base.html" %}
+{% block titre %}Appel{% endblock %}
+{% block contenu %}
+<header class="entete">
+  <div><p class="surtitre">{{ seance.date | date_fr }} · {{ seance.horaire }} · {{ seance.salle or 'Salle à définir' }} · {{ seance.module.classe }}</p>
+    <h1>Appel : {{ seance.module.nom }}</h1></div>
+  <div style="display:flex;gap:10px;flex-wrap:wrap">
+    {% if seance.appel_statut == 'non_lance' %}
+    <form method="post" action="/appel/{{ seance.id }}/ouvrir" class="inline"><button class="bouton" type="submit">Ouvrir l'appel</button></form>
+    {% elif seance.appel_statut == 'ouvert' %}
+    <form method="post" action="/appel/{{ seance.id }}/cloturer" class="inline"><button class="bouton sombre" type="submit">Clôturer l'appel</button></form>
+    {% else %}
+    <form method="post" action="/appel/{{ seance.id }}/rouvrir" class="inline"><button class="bouton second" type="submit">Rouvrir l'appel</button></form>
+    {% endif %}
+    <a class="bouton second" href="/cahier/{{ seance.id }}/remplir">Cahier de texte</a>
+  </div>
+</header>
+
+{% if seance.appel_statut == 'clos' %}
+<div class="flash erreur">Appel clôturé : <span data-compte="absents">{{ etat.absents }}</span> absent(s). Les absents ont été prévenus et peuvent déposer un justificatif.</div>
+{% elif seance.appel_statut == 'non_lance' %}
+<div class="flash">Ouvrez l'appel pour commencer à scanner les cartes QR des étudiants.</div>
+{% endif %}
+
+<div class="rangee">
+  {% if seance.appel_statut == 'ouvert' %}
+  <section class="carte">
+    <div><h2>Scanner les cartes QR</h2>
+      <p class="vide" style="font-size:13px">Chaque étudiant présente sa carte QR (sur son téléphone ou imprimée). Le nom s'affiche dès que la carte est lue.</p></div>
+    <div class="camera"><div id="lecteur">La caméra démarre quand vous cliquez sur le bouton ci-dessous.<br>Elle exige une connexion sécurisée (HTTPS) ou localhost.</div></div>
+    <button class="bouton plein" type="button" id="demarrer">Démarrer la caméra</button>
+    <div class="resultat" id="resultat" aria-live="polite"><small style="font-weight:600">Dernier scan</small><strong id="res-titre">En attente…</strong></div>
+    <form class="formulaire" id="saisie" style="border-top:1px solid var(--bord);padding-top:14px">
+      <label for="matricule">Pas de téléphone ? Saisir le matricule</label>
+      <div style="display:flex;gap:8px"><input id="matricule" type="text" required placeholder="ex. TDSI-L3-0107" autocomplete="off"><button class="bouton second" type="submit">Valider</button></div>
+    </form>
+  </section>
+  {% endif %}
+
+  <section class="carte large">
+    <div class="titre-ligne">
+      <h2>Étudiants inscrits (<span data-compte="total">{{ etat.total }}</span>)</h2>
+      <div style="display:flex;gap:8px"><span class="pastille ok"><span data-compte="presents">{{ etat.presents }}</span> présents</span>
+        <span class="pastille alerte"><span data-compte="absents">{{ etat.absents }}</span> {{ 'absents' if seance.appel_statut == 'clos' else 'non scannés' }}</span></div>
+    </div>
+    <p class="vide" style="font-size:13px">Cliquez sur un étudiant pour corriger son statut (la correction est inscrite au journal).</p>
+    <div class="eleves">
+      {% for e in etat.etudiants %}
+      <form method="post" action="/appel/{{ seance.id }}/basculer/{{ e.id }}" class="inline">
+        <button type="submit" class="eleve {{ e.statut }}" data-eleve="{{ e.id }}">
+          <span class="avatar {{ 'vert' if e.statut == 'present' else 'gris' }}">{{ e.initiales }}</span>
+          <span><strong style="font-size:14px">{{ e.nom }}</strong><small>{{ e.matricule }}</small>
+            <small data-statut>{% if e.statut == 'present' %}Présent · {{ e.heure }} · {{ 'QR' if e.via == 'qr' else 'manuel' }}{% elif e.statut == 'absent' %}Absent{% else %}Pas encore scanné{% endif %}</small></span>
+        </button>
+      </form>
+      {% else %}<p class="vide">Aucun étudiant inscrit dans cette classe.</p>{% endfor %}
+    </div>
+  </section>
+</div>
+{% endblock %}
+{% block scripts %}
+{% if seance.appel_statut == 'ouvert' %}
+<script src="https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js"></script>
+<script>window.SEANCE_ID = {{ seance.id }};</script>
+<script src="/static/scan.js"></script>
+{% endif %}
+{% endblock %}

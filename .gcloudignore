@@ -1,0 +1,21 @@
+# Fichiers envoyés à Google Cloud Build lors de « gcloud run deploy --source . »
+# Rien de secret ni de personnel ne doit partir.
+.git
+.gitignore
+.venv/
+.claude/
+__pycache__/
+*.pyc
+.pytest_cache/
+tests/
+.env
+.secret_key
+env.prod.yaml
+*.db
+uploads/
+imports/
+*.xlsx
+*.csv
+public/
+firebase.json
+.firebaserc

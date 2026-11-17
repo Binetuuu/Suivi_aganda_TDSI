@@ -1,0 +1,29 @@
+# Blueprint Render : https://render.com/docs/blueprint-spec
+# Les valeurs marquées « sync: false » sont demandées par Render lors de la création
+# et ne sont jamais écrites dans ce fichier.
+services:
+  - type: web
+    name: tdsi-campus
+    runtime: docker
+    plan: free
+    region: frankfurt
+    healthCheckPath: /login
+    envVars:
+      - key: TDSI_SECRET_KEY
+        generateValue: true
+      - key: TDSI_DATABASE_URL        # chaîne de connexion Neon (postgresql://…?sslmode=require)
+        sync: false
+      - key: TDSI_ADMIN_EMAIL         # e-mail de la responsable : son compte est créé au 1er démarrage
+        sync: false
+      - key: TDSI_NOTIF_BACKEND
+        value: brevo
+      - key: TDSI_BREVO_API_KEY       # clé API Brevo (gratuit)
+        sync: false
+      - key: TDSI_EMAIL_EXPEDITEUR    # adresse vérifiée dans Brevo, ex. votre Gmail
+        sync: false
+      - key: TDSI_STOCKAGE
+        value: db
+      - key: TDSI_TAILLE_MAX_MO
+        value: "10"
+      - key: TDSI_OTP
+        value: "1"

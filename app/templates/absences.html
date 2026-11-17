@@ -1,0 +1,23 @@
+{% extends "base.html" %}
+{% block titre %}Mes absences{% endblock %}
+{% block contenu %}
+<header><p class="surtitre">{{ stats.absences }} absence(s) · {{ stats.non_justifiees }} non justifiée(s) · présence {{ stats.taux }} %</p><h1>Mes absences</h1></header>
+<section class="liste">
+  {% for p in absences %}
+  <article class="carte">
+    <div class="titre-ligne">
+      <div><strong>{{ p.seance.module.nom }}</strong><br><small class="vide">{{ p.seance.date | date_fr }} · {{ p.seance.horaire }}</small></div>
+      {% set libelles = {'aucun': ('Non justifiée', 'alerte'), 'en_attente': ('Justificatif en cours d\'examen', 'info'), 'accepte': ('Justifiée', 'ok'), 'refuse': ('Justificatif refusé', 'alerte')} %}
+      <span class="pastille {{ libelles[p.justif_statut][1] }}">{{ libelles[p.justif_statut][0] }}</span>
+    </div>
+    {% if p.justif_statut in ('aucun', 'refuse', 'en_attente') %}
+    <form method="post" action="/etudiant/absences/{{ p.id }}/justifier" class="formulaire">
+      <div class="champ"><label for="motif-{{ p.id }}">Motif de l'absence</label>
+        <textarea id="motif-{{ p.id }}" name="motif" required maxlength="2000" placeholder="ex. certificat médical du 10/11, rendez-vous administratif…">{{ p.justificatif or '' }}</textarea></div>
+      <div><button class="bouton second" type="submit">{{ 'Mettre à jour le justificatif' if p.justif_statut == 'en_attente' else 'Envoyer le justificatif' }}</button></div>
+    </form>
+    {% endif %}
+  </article>
+  {% else %}<div class="carte"><p class="vide">Aucune absence. Continuez comme ça !</p></div>{% endfor %}
+</section>
+{% endblock %}

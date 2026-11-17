@@ -1,0 +1,46 @@
+{% extends "base.html" %}
+{% block titre %}Tableau de bord{% endblock %}
+{% block contenu %}
+<header class="entete">
+  <div><p class="surtitre">{{ aujourdhui | date_fr }}</p><h1>Bonjour {{ user.prenom }}</h1></div>
+  <a class="bouton" href="/etudiant/carte">{{ icone('carte') }}Afficher ma carte QR</a>
+</header>
+<section class="kpis" aria-label="Indicateurs">
+  <div class="kpi"><span>Taux de présence</span><strong>{{ stats.taux }} %</strong>
+    <div class="barre {{ 'bas' if stats.alerte }}"><span style="width:{{ stats.taux }}%"></span></div></div>
+  <div class="kpi"><span>Absences</span><strong>{{ stats.absences }}</strong><small>dont {{ stats.non_justifiees }} non justifiée(s)</small></div>
+  <div class="kpi"><span>Séances comptées</span><strong>{{ stats.seances }}</strong><small>appels clôturés</small></div>
+</section>
+{% if stats.alerte %}<div class="flash erreur">Votre présence est sous {{ SEUIL_ALERTE }} %. Pensez à justifier vos absences.</div>{% endif %}
+<div class="rangee">
+  <section class="carte large">
+    <div class="titre-ligne"><h2>Prochains cours</h2><a href="/emploi-du-temps">Emploi du temps</a></div>
+    {% for s in prochaines %}
+    <div class="item">
+      <div class="heure">{{ s.date.strftime('%d/%m') }}<br>{{ s.debut.strftime('%H:%M') }}</div>
+      <div class="corps"><strong>{{ s.module.nom }}</strong><small>{{ s.module.enseignant.nom_complet if s.module.enseignant else 'Enseignant à définir' }} · {{ s.salle or 'Salle à définir' }}</small></div>
+      <span class="pastille">{{ s.type }}</span>
+    </div>
+    {% else %}<p class="vide">Aucun cours programmé.</p>{% endfor %}
+  </section>
+  <section class="carte">
+    <div class="titre-ligne"><h2>Nouveaux supports</h2><a href="/cours">Tout voir</a></div>
+    {% for sp in supports %}
+    <div class="item"><div class="corps"><strong>{{ sp.titre }}</strong><small>{{ sp.module.nom }} · {{ sp.created_at.strftime('%d/%m') }}</small></div>
+      <a class="bouton second petit" href="/cours/{{ sp.id }}/telecharger">{{ icone('telecharger', 16) }}<span class="sr">Télécharger</span></a></div>
+    {% else %}<p class="vide">Aucun support pour l'instant.</p>{% endfor %}
+  </section>
+</div>
+<section class="carte">
+  <div class="titre-ligne"><h2>Dernières séances (cahier de texte)</h2><a href="/cahier">Tout voir</a></div>
+  <div class="grille">
+    {% for e in cahier %}
+    <div class="item" style="flex-direction:column;align-items:flex-start">
+      <span class="pastille info">{{ e.seance.module.nom }} · {{ e.seance.date.strftime('%d/%m') }}</span>
+      <strong>{{ e.titre }}</strong>
+      {% if e.devoir %}<small class="vide">À faire : {{ e.devoir }}</small>{% endif %}
+    </div>
+    {% else %}<p class="vide">Le cahier de texte est vide.</p>{% endfor %}
+  </div>
+</section>
+{% endblock %}

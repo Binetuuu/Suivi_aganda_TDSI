@@ -1,0 +1,45 @@
+{% extends "base.html" %}
+{% block titre %}Planning{% endblock %}
+{% block contenu %}
+<header><p class="surtitre">Modules et séances</p><h1>Planning</h1></header>
+<div class="rangee">
+  <form method="post" action="/admin/modules" class="carte formulaire">
+    <h2>Nouveau module</h2>
+    <div class="champ"><label for="m-nom">Nom du module</label><input id="m-nom" name="nom" type="text" required placeholder="ex. Cryptographie appliquée"></div>
+    <div class="champ"><label for="m-classe">Classe</label><input id="m-classe" name="classe" type="text" required list="liste-classes" placeholder="ex. L3 TDSI"></div>
+    <div class="champ"><label for="m-ens">Enseignant</label><select id="m-ens" name="enseignant_id"><option value="">À définir</option>{% for e in enseignants %}<option value="{{ e.id }}">{{ e.nom_complet }}</option>{% endfor %}</select></div>
+    <datalist id="liste-classes">{% for c in classes %}<option value="{{ c }}">{% endfor %}</datalist>
+    <div><button class="bouton" type="submit">Créer le module</button></div>
+  </form>
+  <form method="post" action="/admin/seances" class="carte formulaire large">
+    <h2>Programmer des séances</h2>
+    {% if modules %}
+    <div class="deux-col">
+      <div class="champ"><label for="s-mod">Module</label><select id="s-mod" name="module_id" required>{% for m in modules %}<option value="{{ m.id }}">{{ m.nom }} · {{ m.classe }}</option>{% endfor %}</select></div>
+      <div class="champ"><label for="s-type">Type</label><select id="s-type" name="type">{% for t in types %}<option>{{ t }}</option>{% endfor %}</select></div>
+      <div class="champ"><label for="s-jour">Date (première séance)</label><input id="s-jour" name="jour" type="date" required value="{{ aujourdhui.isoformat() }}"></div>
+      <div class="champ"><label for="s-deb">Début</label><input id="s-deb" name="debut" type="time" required value="08:00"></div>
+      <div class="champ"><label for="s-fin">Fin</label><input id="s-fin" name="fin" type="time" required value="10:00"></div>
+      <div class="champ"><label for="s-salle">Salle</label><input id="s-salle" name="salle" type="text" placeholder="ex. B12"></div>
+      <div class="champ"><label for="s-sem">Répéter pendant (semaines)</label><input id="s-sem" name="semaines" type="number" min="1" max="20" value="1"></div>
+    </div>
+    <div><button class="bouton" type="submit">Ajouter à l'emploi du temps</button></div>
+    {% else %}<p class="vide">Créez d'abord un module.</p>{% endif %}
+  </form>
+</div>
+<section class="carte">
+  <h2>Modules ({{ modules | length }})</h2>
+  <div class="tableau"><table>
+    <thead><tr><th>Module</th><th>Classe</th><th>Enseignant</th></tr></thead>
+    <tbody>{% for m in modules %}<tr><td><strong>{{ m.nom }}</strong></td><td>{{ m.classe }}</td><td>{{ m.enseignant.nom_complet if m.enseignant else '—' }}</td></tr>
+    {% else %}<tr><td colspan="3" class="vide">Aucun module.</td></tr>{% endfor %}</tbody></table></div>
+</section>
+<section class="carte">
+  <h2>Prochaines séances</h2>
+  <div class="tableau"><table>
+    <thead><tr><th>Date</th><th>Horaire</th><th>Module</th><th>Classe</th><th>Type</th><th>Salle</th><th></th></tr></thead>
+    <tbody>{% for s in seances %}<tr><td>{{ s.date | date_fr }}</td><td>{{ s.horaire }}</td><td>{{ s.module.nom }}</td><td>{{ s.module.classe }}</td><td>{{ s.type }}</td><td>{{ s.salle or '—' }}</td>
+      <td><form method="post" action="/admin/seances/{{ s.id }}/supprimer" class="inline"><button class="lien-bouton" type="submit">Supprimer</button></form></td></tr>
+    {% else %}<tr><td colspan="7" class="vide">Aucune séance à venir.</td></tr>{% endfor %}</tbody></table></div>
+</section>
+{% endblock %}

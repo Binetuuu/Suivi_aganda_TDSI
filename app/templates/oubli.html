@@ -1,0 +1,30 @@
+{% extends "_public.html" %}
+{% block titre %}{{ 'Activer mon compte' if mode == 'activer' else 'Mot de passe oublié' }}{% endblock %}
+{% block public %}
+{% if envoye %}
+<div class="porte-titre">
+  <span class="pastille-icone">{{ icone('courrier', 26) }}</span>
+  <h2>Vérifiez vos e-mails</h2>
+  <p>Si un compte correspond, un lien vient d'être envoyé à son adresse e-mail. Il est valable 7 jours et ne sert qu'une fois. Pensez à regarder dans les spams.</p>
+</div>
+<a class="bouton plein" href="/login">Retour à la connexion</a>
+{% else %}
+<div class="porte-titre">
+  {% if mode == 'activer' %}
+  <h2>Activer mon compte</h2>
+  <p>Votre compte est créé par l'administration TDSI. Indiquez votre matricule ou votre e-mail : vous recevrez un lien pour choisir votre mot de passe.</p>
+  {% else %}
+  <h2>Mot de passe oublié</h2>
+  <p>Indiquez votre matricule ou votre e-mail : vous recevrez un lien pour choisir un nouveau mot de passe.</p>
+  {% endif %}
+</div>
+<form method="post" action="{{ '/activer' if mode == 'activer' else '/mot-de-passe-oublie' }}" class="formulaire">
+  <div class="champ">
+    <label for="identifiant">Login</label>
+    <div class="saisie">{{ icone('utilisateur', 18) }}<input id="identifiant" name="identifiant" type="text" required autocomplete="username" placeholder="Matricule ou e-mail"></div>
+  </div>
+  <button class="bouton plein" type="submit">Recevoir le lien par e-mail</button>
+  <a class="lien-retour" href="/login">← Retour à la connexion</a>
+</form>
+{% endif %}
+{% endblock %}

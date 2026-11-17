@@ -1,0 +1,52 @@
+{% extends "base.html" %}
+{% block titre %}Console admin{% endblock %}
+{% block contenu %}
+<header class="entete"><div><p class="surtitre">{{ aujourdhui | date_fr }}</p><h1>Console d'administration</h1></div>
+  <div style="display:flex;gap:10px;flex-wrap:wrap"><a class="bouton second" href="/admin/utilisateurs">Importer des comptes</a><a class="bouton" href="/admin/appels">{{ icone('qr') }}Scanner les présences</a></div></header>
+<section class="kpis" aria-label="Indicateurs">
+  <div class="kpi"><span>Étudiants actifs</span><strong>{{ compte.get('etudiant', 0) }}</strong><small>{{ non_actives }} compte(s) jamais connecté(s)</small></div>
+  <div class="kpi"><span>Enseignants</span><strong>{{ compte.get('enseignant', 0) }}</strong></div>
+  <div class="kpi"><span>Présence aujourd'hui</span><strong>{{ taux_jour ~ ' %' if taux_jour is not none else '—' }}</strong><small>global : {{ taux_semestre ~ ' %' if taux_semestre is not none else '—' }}</small></div>
+  <div class="kpi"><span>Cahiers non remplis</span><strong style="color:var(--alerte)">{{ sans_cahier | length }}</strong><small>30 derniers jours</small></div>
+</section>
+<section class="carte">
+  <h2>Séances du jour</h2>
+  <div class="tableau"><table>
+    <thead><tr><th>Horaire</th><th>Module</th><th>Classe</th><th>Enseignant</th><th>Salle</th><th>Présents</th><th>Appel</th></tr></thead>
+    <tbody>
+    {% for l in live %}{% set s = l.seance %}
+      <tr><td>{{ s.horaire }}</td><td><a href="/appel/{{ s.id }}"><strong>{{ s.module.nom }}</strong></a></td><td>{{ s.module.classe }}</td>
+        <td>{{ s.module.enseignant.nom_complet if s.module.enseignant else '—' }}</td><td>{{ s.salle or '—' }}</td><td>{{ l.presents }} / {{ l.inscrits }}</td>
+        <td>{% if s.appel_statut == 'clos' %}<span class="pastille ok">Clôturé</span>{% elif s.appel_statut == 'ouvert' %}<span class="pastille info">Ouvert</span>{% elif l.en_retard %}<span class="pastille alerte">Non lancé (en retard)</span>{% else %}<span class="pastille">Non lancé</span>{% endif %}</td></tr>
+    {% else %}<tr><td colspan="7" class="vide">Aucune séance aujourd'hui.</td></tr>{% endfor %}
+    </tbody></table></div>
+</section>
+<div class="rangee">
+  <section class="carte">
+    <h2>Alertes</h2>
+    {% for e, st in sous_seuil %}
+    <div class="item" style="background:var(--alerte-pale);border-color:#F2C9A2"><div class="corps"><strong>{{ e.nom_complet }}</strong><small>{{ e.classe }} · présence {{ st.taux }} % · {{ st.non_justifiees }} absence(s) non justifiée(s)</small></div><a href="/suivi/{{ e.id }}">Voir</a></div>
+    {% endfor %}
+    {% for s in sans_cahier %}
+    <div class="item"><div class="corps"><strong>Cahier non rempli : {{ s.module.nom }}</strong><small>{{ s.date | date_fr }} · {{ s.module.enseignant.nom_complet if s.module.enseignant else '—' }}</small></div></div>
+    {% endfor %}
+    {% if not sous_seuil and not sans_cahier %}<p class="vide">Aucune alerte.</p>{% endif %}
+  </section>
+  <section class="carte">
+    <h2>Justificatifs à traiter ({{ justificatifs | length }})</h2>
+    {% for p in justificatifs %}
+    <div class="item" style="flex-wrap:wrap">
+      <div class="corps"><strong>{{ p.etudiant.nom_complet }}</strong><small>{{ p.seance.module.nom }} · {{ p.seance.date | date_fr }}</small><small>« {{ p.justificatif }} »</small></div>
+      <form method="post" action="/admin/justificatifs/{{ p.id }}/accepte" class="inline"><button class="bouton petit" type="submit">Accepter</button></form>
+      <form method="post" action="/admin/justificatifs/{{ p.id }}/refuse" class="inline"><button class="bouton second petit" type="submit">Refuser</button></form>
+    </div>
+    {% else %}<p class="vide">Rien à traiter.</p>{% endfor %}
+  </section>
+</div>
+<section class="carte">
+  <div class="titre-ligne"><h2>Activité récente</h2><a href="/admin/journal">Tout le journal</a></div>
+  {% for j in journal %}
+  <div style="display:flex;gap:16px;font-size:14px"><span style="min-width:110px;font-weight:600;color:var(--accent)">{{ j.at.strftime('%d/%m %H:%M') }}</span><span>{% if j.user %}<strong>{{ j.user.nom_complet }}</strong> · {% endif %}{{ j.detail }}</span></div>
+  {% else %}<p class="vide">Aucune activité.</p>{% endfor %}
+</section>
+{% endblock %}

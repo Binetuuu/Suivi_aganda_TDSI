@@ -1,0 +1,13 @@
+{% extends "base.html" %}
+{% block titre %}Journal{% endblock %}
+{% block contenu %}
+<header><p class="surtitre">300 derniers événements</p><h1>Journal d'activité</h1></header>
+<section class="carte" style="padding:8px">
+  <div class="tableau"><table>
+    <thead><tr><th>Date</th><th>Utilisateur</th><th>Action</th><th>Détail</th></tr></thead>
+    <tbody>{% for j in lignes %}
+      <tr><td style="white-space:nowrap">{{ j.at.strftime('%d/%m/%Y %H:%M') }}</td><td>{{ j.user.nom_complet if j.user else '—' }}</td>
+        <td><span class="pastille {{ 'alerte' if j.action in ('echec_connexion', 'scan_refuse', 'compte_desactive') else '' }}">{{ j.action | replace('_', ' ') }}</span></td><td>{{ j.detail }}</td></tr>
+    {% else %}<tr><td colspan="4" class="vide">Aucun événement.</td></tr>{% endfor %}</tbody></table></div>
+</section>
+{% endblock %}

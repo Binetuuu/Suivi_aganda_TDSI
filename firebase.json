@@ -1,0 +1,12 @@
+{
+  "hosting": {
+    "public": "public",
+    "ignore": ["firebase.json", "**/.*"],
+    "rewrites": [
+      {
+        "source": "**",
+        "run": { "serviceId": "tdsi-campus", "region": "europe-west1" }
+      }
+    ]
+  }
+}

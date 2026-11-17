@@ -1,0 +1,33 @@
+{% extends "base.html" %}
+{% block titre %}Cours et supports{% endblock %}
+{% block contenu %}
+<header><p class="surtitre">{{ supports | length }} support(s)</p><h1>Cours et supports</h1></header>
+{% if peut_deposer %}
+<form method="post" action="/cours/deposer" enctype="multipart/form-data" class="carte pointillee formulaire">
+  <h2 style="font-size:18px">{{ icone('depot') }} Insérer un nouveau cours</h2>
+  <div class="deux-col">
+    <div class="champ"><label for="module_id">Module</label>
+      <select id="module_id" name="module_id" required>{% for m in modules %}<option value="{{ m.id }}">{{ m.nom }} · {{ m.classe }}</option>{% endfor %}</select></div>
+    <div class="champ"><label for="titre">Titre</label><input id="titre" name="titre" type="text" required maxlength="200" placeholder="ex. Chapitre 5 – RSA"></div>
+    <div class="champ"><label for="fichier">Fichier (PDF, PPTX, DOCX, ZIP, MP4… {{ taille_max }} Mo max)</label><input id="fichier" name="fichier" type="file" required></div>
+  </div>
+  <div><button class="bouton" type="submit">Publier le support</button></div>
+</form>
+{% endif %}
+{% if modules %}
+<div class="filtres" role="group" aria-label="Filtrer par module">
+  <a class="puce {{ 'actif' if not module_actif }}" href="/cours">Tous</a>
+  {% for m in modules %}<a class="puce {{ 'actif' if m.id == module_actif }}" href="/cours?module={{ m.id }}">{{ m.nom }}{% if user.role != 'etudiant' %} · {{ m.classe }}{% endif %}</a>{% endfor %}
+</div>
+{% endif %}
+<section class="grille">
+  {% for s in supports %}
+  <article class="carte">
+    <div class="titre-ligne"><span class="pastille info">{{ s.extension }}</span><small class="vide">{{ s.created_at.strftime('%d/%m/%Y') }}</small></div>
+    <div><h3>{{ s.titre }}</h3><small class="vide">{{ s.module.nom }} · {{ s.auteur.nom_complet }}</small></div>
+    <div class="titre-ligne"><small class="vide">{{ s.taille_lisible }} · {{ s.telechargements }} téléchargement(s)</small>
+      <a class="bouton second petit" href="/cours/{{ s.id }}/telecharger">{{ icone('telecharger', 16) }}Télécharger</a></div>
+  </article>
+  {% else %}<div class="carte"><p class="vide">Aucun support publié pour l'instant.</p></div>{% endfor %}
+</section>
+{% endblock %}

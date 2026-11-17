@@ -1,0 +1,13 @@
+{% extends "base.html" %}
+{% block titre %}Mot de passe{% endblock %}
+{% block contenu %}
+<header><p class="surtitre">Sécurité du compte</p><h1>Choisir mon mot de passe</h1></header>
+{% if user.must_change_password %}<div class="flash">Première connexion : remplacez votre mot de passe provisoire avant de continuer.</div>{% endif %}
+<form method="post" action="/mot-de-passe" class="carte formulaire" style="max-width:480px">
+  {% if erreur %}<div class="flash erreur" role="alert">{{ erreur }}</div>{% endif %}
+  <div class="champ"><label for="actuel">Mot de passe actuel</label><input id="actuel" name="actuel" type="password" required autocomplete="current-password"></div>
+  <div class="champ"><label for="nouveau">Nouveau mot de passe (8 caractères minimum)</label><input id="nouveau" name="nouveau" type="password" minlength="8" required autocomplete="new-password"></div>
+  <div class="champ"><label for="confirmation">Confirmer</label><input id="confirmation" name="confirmation" type="password" minlength="8" required autocomplete="new-password"></div>
+  <button class="bouton" type="submit">Enregistrer</button>
+</form>
+{% endblock %}

@@ -1,0 +1,12 @@
+{% extends "base.html" %}
+{% block titre %}Remplir le cahier{% endblock %}
+{% block contenu %}
+<header><p class="surtitre">{{ seance.module.classe }} · {{ seance.type }} · {{ seance.date | date_fr }} · {{ seance.horaire }}</p><h1>{{ seance.module.nom }}</h1></header>
+<form method="post" action="/cahier/{{ seance.id }}/remplir" class="carte formulaire" style="max-width:760px">
+  <div class="champ"><label for="titre">Titre de la séance</label><input id="titre" name="titre" type="text" required maxlength="200" value="{{ entree.titre if entree else '' }}" placeholder="ex. Signatures numériques"></div>
+  <div class="champ"><label for="contenu">Contenu abordé</label><textarea id="contenu" name="contenu" rows="6" placeholder="Notions vues, chapitres, exemples…">{{ entree.contenu if entree else '' }}</textarea></div>
+  <div class="champ"><label for="devoir">Travail à faire</label><input id="devoir" name="devoir" type="text" value="{{ entree.devoir if entree else '' }}" placeholder="ex. Exercices 1 à 3 pour jeudi"></div>
+  {% if entree %}<p class="vide" style="font-size:13px">Une modification devra être revalidée par le délégué.</p>{% endif %}
+  <div style="display:flex;gap:10px;flex-wrap:wrap"><button class="bouton" type="submit">Enregistrer la séance</button><a class="bouton second" href="/cahier">Annuler</a></div>
+</form>
+{% endblock %}

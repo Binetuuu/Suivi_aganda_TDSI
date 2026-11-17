@@ -1,0 +1,27 @@
+{% extends "base.html" %}
+{% block titre %}Suivi des étudiants{% endblock %}
+{% block contenu %}
+<header><p class="surtitre">{{ classe or 'Aucune classe' }} · seuil d'alerte {{ SEUIL_ALERTE }} %</p><h1>Suivi par étudiant</h1></header>
+{% if classes | length > 1 %}
+<div class="filtres">{% for c in classes %}<a class="puce {{ 'actif' if c == classe }}" href="/suivi?classe={{ c | urlencode }}">{{ c }}</a>{% endfor %}</div>
+{% endif %}
+<section class="carte">
+  <div class="tableau">
+    <table>
+      <thead><tr><th>Étudiant</th><th>Matricule</th><th>Présence</th><th>Absences</th><th>Non justifiées</th><th></th></tr></thead>
+      <tbody>
+        {% for e, st in lignes %}
+        <tr>
+          <td><strong>{{ e.nom_complet }}</strong>{% if e.delegue %} <span class="pastille info">Délégué</span>{% endif %}</td>
+          <td>{{ e.matricule }}</td>
+          <td><span class="pastille {{ 'alerte' if st.alerte else 'ok' }}">{{ st.taux }} %</span></td>
+          <td>{{ st.absences }}</td>
+          <td>{{ st.non_justifiees }}</td>
+          <td><a href="/suivi/{{ e.id }}">Voir la fiche</a></td>
+        </tr>
+        {% else %}<tr><td colspan="6" class="vide">Aucun étudiant.</td></tr>{% endfor %}
+      </tbody>
+    </table>
+  </div>
+</section>
+{% endblock %}

@@ -1,0 +1,34 @@
+{% extends "base.html" %}
+{% block titre %}{{ etudiant.nom_complet }}{% endblock %}
+{% block contenu %}
+<a href="/suivi?classe={{ etudiant.classe | urlencode }}" style="font-size:14px">← Retour à la liste</a>
+<section class="carte" style="flex-direction:row;flex-wrap:wrap;align-items:center;gap:20px">
+  <span class="avatar grand">{{ etudiant.initiales }}</span>
+  <div style="flex:1 1 220px"><h1 style="font-size:24px">{{ etudiant.nom_complet }}</h1>
+    <p class="vide">{{ etudiant.matricule }} · {{ etudiant.classe }}{% if etudiant.delegue %} · Délégué{% endif %}</p></div>
+</section>
+<section class="kpis">
+  <div class="kpi"><span>Présence globale</span><strong>{{ stats.taux }} %</strong></div>
+  <div class="kpi"><span>Séances comptées</span><strong>{{ stats.seances }}</strong></div>
+  <div class="kpi"><span>Absences</span><strong>{{ stats.absences }}</strong></div>
+  <div class="kpi"><span>Non justifiées</span><strong style="color:var(--alerte)">{{ stats.non_justifiees }}</strong></div>
+</section>
+{% if stats.alerte %}<div class="flash erreur">Seuil d'alerte atteint : présence inférieure à {{ SEUIL_ALERTE }} %. Un entretien avec le responsable pédagogique est recommandé.</div>{% endif %}
+<div class="rangee">
+  <section class="carte">
+    <h2>Présence par module</h2>
+    {% for nom, taux in stats.modules() %}
+    <div><div class="titre-ligne" style="font-size:14px"><span>{{ nom }}</span><strong>{{ taux }} %</strong></div>
+      <div class="barre {{ 'bas' if taux < SEUIL_ALERTE }}"><span style="width:{{ taux }}%"></span></div></div>
+    {% else %}<p class="vide">Pas encore d'appel clôturé.</p>{% endfor %}
+  </section>
+  <section class="carte">
+    <h2>Historique des absences</h2>
+    {% for p in absences %}
+    <div class="item"><div class="corps"><strong>{{ p.seance.module.nom }}</strong><small>{{ p.seance.date | date_fr }}{% if p.justificatif %} · « {{ p.justificatif | truncate(80) }} »{% endif %}</small></div>
+      {% set j = {'aucun': ('Non justifiée', 'alerte'), 'en_attente': ('En attente', 'info'), 'accepte': ('Justifiée', 'ok'), 'refuse': ('Refusée', 'alerte')}[p.justif_statut] %}
+      <span class="pastille {{ j[1] }}">{{ j[0] }}</span></div>
+    {% else %}<p class="vide">Aucune absence.</p>{% endfor %}
+  </section>
+</div>
+{% endblock %}

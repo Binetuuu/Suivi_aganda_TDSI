@@ -1,0 +1,18 @@
+.venv/
+__pycache__/
+*.pyc
+.pytest_cache/
+# Données et secrets : ne jamais les mettre dans git
+.env
+.secret_key
+*.db
+uploads/
+# Listes réelles d'étudiants et d'enseignants
+imports/
+*.xlsx
+contacts*.csv
+
+# Secrets de production
+env.prod.yaml
+.firebase/
+.claude/

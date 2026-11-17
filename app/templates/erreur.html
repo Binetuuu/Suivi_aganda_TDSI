@@ -1,0 +1,9 @@
+{% extends "_public.html" %}
+{% block titre %}{{ titre }}{% endblock %}
+{% block public %}
+<div class="porte-titre">
+  <h2>{{ titre }}</h2>
+  <p>{{ detail }}</p>
+</div>
+<a class="bouton plein" href="/">Revenir à l'accueil</a>
+{% endblock %}

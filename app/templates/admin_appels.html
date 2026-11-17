@@ -1,0 +1,26 @@
+{% extends "base.html" %}
+{% block titre %}Scanner les présences{% endblock %}
+{% block contenu %}
+<header><p class="surtitre">{{ aujourdhui | date_fr }}</p><h1>Scanner les présences</h1></header>
+<div class="flash">Choisissez la séance, ouvrez l'appel puis scannez la carte QR de chaque étudiant avec la caméra du téléphone ou de l'ordinateur.</div>
+<section class="carte">
+  <h2>Séances d'aujourd'hui</h2>
+  {% for s in du_jour %}
+  <div class="item" style="flex-wrap:wrap">
+    <div class="heure">{{ s.horaire }}</div>
+    <div class="corps"><strong>{{ s.module.nom }}</strong><small>{{ s.module.classe }} · {{ s.type }} · {{ s.salle or 'Salle à définir' }} · {{ s.module.enseignant.nom_complet if s.module.enseignant else '—' }}</small></div>
+    {% if s.appel_statut == 'clos' %}<span class="pastille ok">Appel clôturé</span><a class="bouton second petit" href="/appel/{{ s.id }}">Voir</a>
+    {% elif s.appel_statut == 'ouvert' %}<a class="bouton petit" href="/appel/{{ s.id }}">{{ icone('qr', 16) }}Continuer le scan</a>
+    {% else %}<a class="bouton petit" href="/appel/{{ s.id }}">{{ icone('qr', 16) }}Scanner</a>{% endif %}
+  </div>
+  {% else %}<p class="vide">Aucune séance aujourd'hui. Ajoutez-en dans <a href="/admin/planning">Planning</a>.</p>{% endfor %}
+</section>
+<section class="carte">
+  <h2>7 prochains jours</h2>
+  {% for s in prochaines %}
+  <div class="item"><div class="heure">{{ s.date.strftime('%d/%m') }}<br>{{ s.debut.strftime('%H:%M') }}</div>
+    <div class="corps"><strong>{{ s.module.nom }}</strong><small>{{ s.module.classe }} · {{ s.type }} · {{ s.salle or '—' }}</small></div>
+    <a class="bouton second petit" href="/appel/{{ s.id }}">Préparer</a></div>
+  {% else %}<p class="vide">Rien de programmé.</p>{% endfor %}
+</section>
+{% endblock %}
