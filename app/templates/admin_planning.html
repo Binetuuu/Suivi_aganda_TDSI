@@ -2,6 +2,22 @@
 {% block titre %}Planning{% endblock %}
 {% block contenu %}
 <header><p class="surtitre">Modules et séances</p><h1>Planning</h1></header>
+<form method="post" action="/admin/emploi-du-temps" enctype="multipart/form-data" class="carte pointillee formulaire">
+  <h2>Charger l'emploi du temps du semestre</h2>
+  <p class="vide" style="font-size:14px">Chaque créneau de la semaine type est répété toutes les semaines entre les deux dates. Les modules manquants sont créés ; relancer l'import n'ajoute pas de doublons.</p>
+  <div class="deux-col">
+    <div class="champ"><label for="edt-source">Emploi du temps</label>
+      <select id="edt-source" name="source">
+        <option value="l3tdsi_s2">L3 TDSI · Semestre 2 (2025-2026), déjà saisi</option>
+        <option value="fichier">Mon fichier (.csv ou .xlsx)</option>
+      </select></div>
+    <div class="champ"><label for="edt-debut">Début du semestre</label><input id="edt-debut" name="debut" type="date" required value="{{ aujourdhui.isoformat() }}"></div>
+    <div class="champ"><label for="edt-fin">Fin du semestre</label><input id="edt-fin" name="fin" type="date" required value="{{ fin_defaut.isoformat() }}"></div>
+    <div class="champ"><label for="edt-fichier">Fichier (seulement pour « Mon fichier »)</label><input id="edt-fichier" name="fichier" type="file" accept=".csv,.xlsx"></div>
+  </div>
+  <div style="display:flex;gap:10px;flex-wrap:wrap"><button class="bouton" type="submit">Charger l'emploi du temps</button>
+    <a class="bouton second" href="/admin/emploi-du-temps-L3TDSI-S2.csv">Voir / télécharger le modèle L3 TDSI</a></div>
+</form>
 <div class="rangee">
   <form method="post" action="/admin/modules" class="carte formulaire">
     <h2>Nouveau module</h2>
@@ -30,9 +46,15 @@
 <section class="carte">
   <h2>Modules ({{ modules | length }})</h2>
   <div class="tableau"><table>
-    <thead><tr><th>Module</th><th>Classe</th><th>Enseignant</th></tr></thead>
-    <tbody>{% for m in modules %}<tr><td><strong>{{ m.nom }}</strong></td><td>{{ m.classe }}</td><td>{{ m.enseignant.nom_complet if m.enseignant else '—' }}</td></tr>
-    {% else %}<tr><td colspan="3" class="vide">Aucun module.</td></tr>{% endfor %}</tbody></table></div>
+    <thead><tr><th>Code</th><th>Module</th><th>Classe</th><th>Enseignant (emploi du temps)</th><th>Compte enseignant relié</th></tr></thead>
+    <tbody>{% for m in modules %}<tr><td>{{ m.code or '—' }}</td><td><strong>{{ m.nom }}</strong></td><td>{{ m.classe }}</td><td>{{ m.enseignant_nom or '—' }}</td>
+      <td><form method="post" action="/admin/modules/{{ m.id }}/enseignant" style="display:flex;gap:8px;align-items:center">
+        <label class="sr" for="ens-{{ m.id }}">Enseignant de {{ m.nom }}</label>
+        <select id="ens-{{ m.id }}" name="enseignant_id" style="min-width:180px"><option value="">Aucun compte</option>
+          {% for e in enseignants %}<option value="{{ e.id }}" {{ 'selected' if e.id == m.enseignant_id }}>{{ e.nom_complet }}</option>{% endfor %}</select>
+        <button class="bouton second petit" type="submit">Relier</button></form></td></tr>
+    {% else %}<tr><td colspan="5" class="vide">Aucun module : chargez l'emploi du temps ci-dessus.</td></tr>{% endfor %}</tbody></table></div>
+  <p class="vide" style="font-size:12px;margin:0">Reliez un module au compte de son enseignant (après l'import des comptes) pour qu'il puisse remplir le cahier de texte et déposer ses cours.</p>
 </section>
 <section class="carte">
   <h2>Prochaines séances</h2>

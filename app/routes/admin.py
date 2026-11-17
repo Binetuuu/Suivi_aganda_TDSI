@@ -10,7 +10,8 @@ from ..db import get_db
 from ..models import ROLES, TYPES_SEANCE, Journal, Module, Presence, Seance, User
 from ..security import masquer_telephone
 from ..services import (
-    COLONNES_IMPORT, RapportImport, classes, creer_ou_maj_utilisateur, envoyer_invitation, importer_utilisateurs, preparer_lien,
+    COLONNES_IMPORT, EMPLOI_DU_TEMPS_L3TDSI_S2, RapportImport, classes, creer_ou_maj_utilisateur, envoyer_invitation,
+    importer_emploi_du_temps, importer_utilisateurs, preparer_lien,
     journaliser, lire_fichier_import, seances_sans_cahier, stats_etudiant, taux_global,
 )
 from ..web import flash, rediriger, rendre, exiger_role
@@ -190,7 +191,8 @@ def planning(request: Request, user: User = Depends(admin_requis), db: Session =
     enseignants = list(db.scalars(select(User).where(User.role == "enseignant", User.actif.is_(True)).order_by(User.nom)))
     seances = list(db.scalars(select(Seance).where(Seance.date >= date.today()).order_by(Seance.date, Seance.debut).limit(40)))
     return rendre(request, "admin_planning.html", user=user, modules=modules, enseignants=enseignants,
-                  seances=seances, classes=classes(db), types=TYPES_SEANCE, aujourdhui=date.today())
+                  seances=seances, classes=classes(db), types=TYPES_SEANCE, aujourdhui=date.today(),
+                  fin_defaut=date.today() + timedelta(weeks=16))
 
 
 @router.post("/modules")
@@ -204,6 +206,54 @@ def creer_module(request: Request, nom: str = Form(...), classe: str = Form(...)
     journaliser(db, user, "module", f"{module.nom} ({module.classe})")
     db.commit()
     flash(request, "Module créé.")
+    return rediriger("/admin/planning")
+
+
+@router.get("/emploi-du-temps-L3TDSI-S2.csv")
+def modele_emploi_du_temps(user: User = Depends(admin_requis)):
+    contenu = EMPLOI_DU_TEMPS_L3TDSI_S2.read_text(encoding="utf-8")
+    return Response("﻿" + contenu, media_type="text/csv; charset=utf-8",
+                    headers={"Content-Disposition": "attachment; filename=emploi_du_temps_L3TDSI_S2.csv"})
+
+
+@router.post("/emploi-du-temps")
+async def importer_edt(
+    request: Request, debut: date = Form(...), fin: date = Form(...), source: str = Form("l3tdsi_s2"),
+    fichier: UploadFile | None = File(None), user: User = Depends(admin_requis), db: Session = Depends(get_db),
+):
+    if source == "fichier":
+        if fichier is None or not (fichier.filename or "").lower().endswith((".csv", ".xlsx")):
+            flash(request, "Choisissez un fichier .csv ou .xlsx.", "erreur")
+            return rediriger("/admin/planning")
+        nom, contenu = fichier.filename.lower(), await fichier.read(2 * 1024 * 1024)
+    else:
+        nom, contenu = "edt.csv", EMPLOI_DU_TEMPS_L3TDSI_S2.read_bytes()
+    try:
+        lignes = lire_fichier_import(nom, contenu)
+    except Exception:
+        flash(request, "Impossible de lire ce fichier. Partez du modèle fourni.", "erreur")
+        return rediriger("/admin/planning")
+    rapport = importer_emploi_du_temps(db, lignes, debut, fin, user)
+    message = (f"Emploi du temps importé : {rapport.modules_crees} module(s) créé(s), "
+               f"{rapport.seances_creees} séance(s) ajoutée(s)"
+               + (f", {rapport.deja_presentes} déjà présente(s)" if rapport.deja_presentes else "") + ".")
+    flash(request, message, "erreur" if rapport.erreurs else "ok")
+    for erreur in rapport.erreurs[:10]:
+        flash(request, erreur, "erreur")
+    return rediriger("/admin/planning")
+
+
+@router.post("/modules/{module_id}/enseignant")
+def relier_enseignant(request: Request, module_id: int, enseignant_id: int | None = Form(None),
+                      user: User = Depends(admin_requis), db: Session = Depends(get_db)):
+    module = db.get(Module, module_id)
+    enseignant = db.get(User, enseignant_id) if enseignant_id else None
+    if module is None or (enseignant is not None and enseignant.role != "enseignant"):
+        raise HTTPException(404, "Module ou enseignant introuvable.")
+    module.enseignant_id = enseignant.id if enseignant else None
+    journaliser(db, user, "module", f"{module.nom} : enseignant {enseignant.nom_complet if enseignant else 'retiré'}")
+    db.commit()
+    flash(request, f"{module.nom} : enseignant mis à jour.")
     return rediriger("/admin/planning")
 
 

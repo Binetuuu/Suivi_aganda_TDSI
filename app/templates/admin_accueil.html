@@ -16,7 +16,7 @@
     <tbody>
     {% for l in live %}{% set s = l.seance %}
       <tr><td>{{ s.horaire }}</td><td><a href="/appel/{{ s.id }}"><strong>{{ s.module.nom }}</strong></a></td><td>{{ s.module.classe }}</td>
-        <td>{{ s.module.enseignant.nom_complet if s.module.enseignant else '—' }}</td><td>{{ s.salle or '—' }}</td><td>{{ l.presents }} / {{ l.inscrits }}</td>
+        <td>{{ s.module.nom_enseignant }}</td><td>{{ s.salle or '—' }}</td><td>{{ l.presents }} / {{ l.inscrits }}</td>
         <td>{% if s.appel_statut == 'clos' %}<span class="pastille ok">Clôturé</span>{% elif s.appel_statut == 'ouvert' %}<span class="pastille info">Ouvert</span>{% elif l.en_retard %}<span class="pastille alerte">Non lancé (en retard)</span>{% else %}<span class="pastille">Non lancé</span>{% endif %}</td></tr>
     {% else %}<tr><td colspan="7" class="vide">Aucune séance aujourd'hui.</td></tr>{% endfor %}
     </tbody></table></div>
@@ -28,7 +28,7 @@
     <div class="item" style="background:var(--alerte-pale);border-color:#F2C9A2"><div class="corps"><strong>{{ e.nom_complet }}</strong><small>{{ e.classe }} · présence {{ st.taux }} % · {{ st.non_justifiees }} absence(s) non justifiée(s)</small></div><a href="/suivi/{{ e.id }}">Voir</a></div>
     {% endfor %}
     {% for s in sans_cahier %}
-    <div class="item"><div class="corps"><strong>Cahier non rempli : {{ s.module.nom }}</strong><small>{{ s.date | date_fr }} · {{ s.module.enseignant.nom_complet if s.module.enseignant else '—' }}</small></div></div>
+    <div class="item"><div class="corps"><strong>Cahier non rempli : {{ s.module.nom }}</strong><small>{{ s.date | date_fr }} · {{ s.module.nom_enseignant }}</small></div></div>
     {% endfor %}
     {% if not sous_seuil and not sans_cahier %}<p class="vide">Aucune alerte.</p>{% endif %}
   </section>

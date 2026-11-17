@@ -8,7 +8,7 @@
   {% for s in du_jour %}
   <div class="item" style="flex-wrap:wrap">
     <div class="heure">{{ s.horaire }}</div>
-    <div class="corps"><strong>{{ s.module.nom }}</strong><small>{{ s.module.classe }} · {{ s.type }} · {{ s.salle or 'Salle à définir' }} · {{ s.module.enseignant.nom_complet if s.module.enseignant else '—' }}</small></div>
+    <div class="corps"><strong>{{ s.module.nom }}</strong><small>{{ s.module.classe }} · {{ s.type }} · {{ s.salle or 'Salle à définir' }} · {{ s.module.nom_enseignant }}</small></div>
     {% if s.appel_statut == 'clos' %}<span class="pastille ok">Appel clôturé</span><a class="bouton second petit" href="/appel/{{ s.id }}">Voir</a>
     {% elif s.appel_statut == 'ouvert' %}<a class="bouton petit" href="/appel/{{ s.id }}">{{ icone('qr', 16) }}Continuer le scan</a>
     {% else %}<a class="bouton petit" href="/appel/{{ s.id }}">{{ icone('qr', 16) }}Scanner</a>{% endif %}

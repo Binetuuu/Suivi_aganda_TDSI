@@ -306,3 +306,28 @@ def test_refus_brevo_journalise_la_raison(monkeypatch, capsys):
     assert notifications.envoyer_email("x@test.sn", "Sujet", "Texte") is False
     sortie = capsys.readouterr().out
     assert "HTTP 403" in sortie and "unrecognised IP address" in sortie and "xkeysib-test" not in sortie
+
+
+def test_import_emploi_du_temps_L3TDSI(client, db):
+    creer(db, nom="Admin", prenom="Test", role="admin", email="admin@test.sn")
+    prof = creer(db, nom="Dione", prenom="Nafi", role="enseignant", email="nafi@test.sn")
+    connecter(client, "admin@test.sn")
+    donnees = {"source": "l3tdsi_s2", "debut": "2026-11-16", "fin": "2026-11-29"}  # deux semaines, lundi → dimanche
+    r = client.post("/admin/emploi-du-temps", data=donnees)
+    assert "8 module(s) créé(s), 16 séance(s) ajoutée(s)" in r.text
+    # relancer ne crée pas de doublons
+    r = client.post("/admin/emploi-du-temps", data=donnees)
+    assert "0 module(s) créé(s), 0 séance(s) ajoutée(s), 16 déjà présente(s)" in r.text
+    crypto = db.query(Module).filter_by(code="LTDSI-CI 3611/3622").one()
+    assert crypto.enseignant_nom == "Nafi Dione" and crypto.nom_enseignant == "Nafi Dione"
+    mardis = db.query(Seance).filter_by(module_id=crypto.id).order_by(Seance.date).all()
+    assert [s.date.isoformat() for s in mardis] == ["2026-11-17", "2026-11-24"]
+    assert (mardis[0].debut.hour, mardis[0].fin.hour) == (18, 20)
+    samedi = db.query(Seance).join(Module).filter(Module.code == "LTDSI-CI 3632").first()
+    assert samedi.date.weekday() == 5 and samedi.debut.hour == 10
+    # relier le module au compte de l'enseignante
+    client.post(f"/admin/modules/{crypto.id}/enseignant", data={"enseignant_id": prof.id})
+    db.expire_all()
+    assert db.get(Module, crypto.id).nom_enseignant == "Nafi Dione" and db.get(Module, crypto.id).enseignant_id == prof.id
+    assert "Programmation orientée objet" in client.get("/admin/planning").text
+    assert "Mathématique discrète" in client.get("/admin/emploi-du-temps-L3TDSI-S2.csv").text

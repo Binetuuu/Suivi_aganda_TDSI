@@ -319,3 +319,74 @@ def creer_premier_admin() -> None:
         envoyer_invitation(admin)
         # Visible seulement dans les journaux du serveur, au cas où l'e-mail n'arriverait pas.
         print(f"[TDSI] Lien d'activation du compte admin {email} : {lien_inscription(admin)}", flush=True)
+
+
+# --- Import d'un emploi du temps (semaine type répétée sur le semestre) ------------
+
+JOURS_SEMAINE = {"lundi": 0, "mardi": 1, "mercredi": 2, "jeudi": 3, "vendredi": 4, "samedi": 5, "dimanche": 6}
+EMPLOI_DU_TEMPS_L3TDSI_S2 = config.BASE_DIR / "app" / "data" / "emploi_du_temps_L3TDSI_S2.csv"
+
+
+@dataclass
+class RapportPlanning:
+    modules_crees: int = 0
+    seances_creees: int = 0
+    deja_presentes: int = 0
+    erreurs: list[str] = field(default_factory=list)
+
+
+def _heure(valeur: str):
+    texte = (valeur or "").strip().lower().replace("h", ":")
+    if texte.endswith(":"):
+        texte += "00"
+    return datetime.strptime(texte, "%H:%M").time()
+
+
+def importer_emploi_du_temps(db: Session, lignes: list[dict], debut: date, fin: date, auteur: User) -> RapportPlanning:
+    """Crée les modules manquants puis une séance par créneau et par semaine entre debut et fin."""
+    from .models import TYPES_SEANCE
+
+    rapport = RapportPlanning()
+    if fin < debut:
+        rapport.erreurs.append("La date de fin est avant la date de début.")
+        return rapport
+    if (fin - debut).days > 200:
+        rapport.erreurs.append("Période trop longue (plus de 200 jours).")
+        return rapport
+    for i, ligne in enumerate(lignes, start=2):
+        nom = (ligne.get("module") or "").strip()
+        classe = (ligne.get("classe") or "").strip()
+        jour = JOURS_SEMAINE.get((ligne.get("jour") or "").strip().lower())
+        type_seance = (ligne.get("type") or "CM").strip().upper()
+        try:
+            h_debut, h_fin = _heure(ligne.get("debut")), _heure(ligne.get("fin"))
+        except ValueError:
+            h_debut = h_fin = None
+        if not nom or not classe or jour is None or h_debut is None or h_fin <= h_debut or type_seance not in TYPES_SEANCE:
+            rapport.erreurs.append(f"Ligne {i} : module, classe, jour, horaires ou type invalides.")
+            continue
+        code = (ligne.get("code") or "").strip() or None
+        critere = Module.code == code if code else Module.nom == nom
+        module = db.scalars(select(Module).where(critere, Module.classe == classe)).first()
+        if module is None:
+            module = Module(nom=nom, classe=classe, code=code)
+            db.add(module)
+            db.flush()
+            rapport.modules_crees += 1
+        module.nom = nom
+        module.enseignant_nom = (ligne.get("enseignant") or "").strip() or module.enseignant_nom
+        jour_courant = debut + timedelta(days=(jour - debut.weekday()) % 7)
+        while jour_courant <= fin:
+            existe = db.scalars(select(Seance).where(
+                Seance.module_id == module.id, Seance.date == jour_courant, Seance.debut == h_debut)).first()
+            if existe:
+                rapport.deja_presentes += 1
+            else:
+                db.add(Seance(module_id=module.id, date=jour_courant, debut=h_debut, fin=h_fin,
+                              salle=(ligne.get("salle") or "").strip(), type=type_seance))
+                rapport.seances_creees += 1
+            jour_courant += timedelta(weeks=1)
+    journaliser(db, auteur, "emploi_du_temps",
+                f"{rapport.modules_crees} module(s), {rapport.seances_creees} séance(s) du {debut:%d/%m/%Y} au {fin:%d/%m/%Y}")
+    db.commit()
+    return rapport

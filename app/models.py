@@ -63,8 +63,18 @@ class Module(Base):
     nom: Mapped[str] = mapped_column(String(120))
     classe: Mapped[str] = mapped_column(String(40), index=True)
     enseignant_id: Mapped[int | None] = mapped_column(ForeignKey("users.id"))
+    # Code de l'UE (ex. « LTDSI-CI 3651 ») et nom de l'enseignant tel qu'écrit dans l'emploi
+    # du temps, affiché tant qu'aucun compte enseignant n'est relié au module.
+    code: Mapped[str | None] = mapped_column(String(40))
+    enseignant_nom: Mapped[str | None] = mapped_column(String(120))
 
     enseignant: Mapped[User | None] = relationship()
+
+    @property
+    def nom_enseignant(self) -> str:
+        if self.enseignant:
+            return self.enseignant.nom_complet
+        return self.enseignant_nom or "Enseignant à définir"
 
 
 class Seance(Base):

@@ -18,7 +18,7 @@
     {% for s in prochaines %}
     <div class="item">
       <div class="heure">{{ s.date.strftime('%d/%m') }}<br>{{ s.debut.strftime('%H:%M') }}</div>
-      <div class="corps"><strong>{{ s.module.nom }}</strong><small>{{ s.module.enseignant.nom_complet if s.module.enseignant else 'Enseignant à définir' }} · {{ s.salle or 'Salle à définir' }}</small></div>
+      <div class="corps"><strong>{{ s.module.nom }}</strong><small>{{ s.module.nom_enseignant }} · {{ s.salle or 'Salle à définir' }}</small></div>
       <span class="pastille">{{ s.type }}</span>
     </div>
     {% else %}<p class="vide">Aucun cours programmé.</p>{% endfor %}
