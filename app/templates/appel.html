@@ -62,6 +62,6 @@
 {% if seance.appel_statut == 'ouvert' %}
 <script src="https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js"></script>
 <script>window.SEANCE_ID = {{ seance.id }};</script>
-<script src="/static/scan.js"></script>
+<script src="/static/scan.js?v={{ version_static }}"></script>
 {% endif %}
 {% endblock %}

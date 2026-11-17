@@ -25,6 +25,10 @@ templates.env.filters["date_fr"] = date_fr
 templates.env.filters["date_courte"] = lambda d: f"{d:%d/%m/%Y}"
 templates.env.globals["SEUIL_ALERTE"] = SEUIL_ALERTE
 templates.env.globals["annee"] = date.today().year
+# Numéro de version des fichiers CSS/JS : change à chaque mise à jour, ce qui force les
+# navigateurs à recharger les styles au lieu de garder l'ancienne version en cache.
+_STATIC = BASE_DIR / "app" / "static"
+templates.env.globals["version_static"] = max(int(f.stat().st_mtime) for f in _STATIC.iterdir() if f.is_file())
 
 
 class Redirection(Exception):

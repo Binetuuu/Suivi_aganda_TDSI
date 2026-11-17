@@ -146,54 +146,75 @@ td .actions { display: flex; flex-wrap: wrap; gap: 10px; }
   h1 { font-size: 24px; }
 }
 
-/* ---------- Pages publiques (connexion, activation, mot de passe oublié) ----------
-   Une carte centrée posée sur deux couches inclinées, comme le site modèle,
-   aux couleurs TDSI (bleu sécurité et orange). */
-.porte { min-height: 100vh; display: flex; align-items: center; justify-content: center; padding: 56px 20px;
-  background-color: #F4F6FA;
-  background-image: linear-gradient(rgba(37,87,214,.055) 1px, transparent 1px), linear-gradient(90deg, rgba(37,87,214,.055) 1px, transparent 1px);
-  background-size: 32px 32px; }
-.porte-pile { position: relative; width: 100%; max-width: 440px; }
-.couche { position: absolute; inset: 0; border-radius: 22px; }
-.couche-a { background: linear-gradient(160deg, #2F64F0, #1B3FA8); transform: rotate(-4deg) translate(-14px, 4px); }
-.couche-b { background: linear-gradient(160deg, #F08A3C, #C55A11); transform: rotate(3deg) translate(16px, 20px); }
-.porte-carte { position: relative; background: #fff; border-radius: 22px; box-shadow: 0 28px 70px rgba(15,27,45,.22); overflow: hidden; }
-.porte-logo { display: flex; justify-content: center; padding: 26px 24px 14px; background: linear-gradient(180deg, #EEF3FF, #fff); }
-.porte-marque { display: flex; align-items: center; gap: 12px; text-decoration: none; color: var(--encre); }
-.porte-marque .bouclier { width: 64px; height: 64px; filter: none; }
-.porte-marque strong { display: block; font-family: var(--titre); font-size: 34px; line-height: 1; letter-spacing: .06em; color: var(--accent); }
-.porte-marque small { display: block; margin-top: 5px; font-size: 11px; line-height: 1.3; color: var(--doux); }
-.porte-corps { padding: 6px 32px 26px; display: flex; flex-direction: column; gap: 16px; }
+/* ---------- Pages publiques : style « cybersécurité sombre » ----------
+   Fond noir avec grille lumineuse et réseau de points animé (public.js),
+   carte translucide au centre avec une bordure bleue lumineuse. */
+.porte { --cyan: #5EA3FF; --cyan-vif: #7FB8FF; --verre: rgba(10, 18, 34, .72);
+  position: relative; min-height: 100vh; overflow: hidden; display: flex; align-items: center; justify-content: center;
+  padding: 48px 18px; color: #DCE6F7; background: #04080F;
+  background-image:
+    linear-gradient(rgba(94,163,255,.07) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(94,163,255,.07) 1px, transparent 1px);
+  background-size: 44px 44px; }
+.porte::before { content: ""; position: absolute; inset: 0; pointer-events: none;
+  background: radial-gradient(ellipse 70% 60% at 50% 45%, transparent 30%, #04080F 85%); }
+.porte-reseau { position: absolute; inset: 0; width: 100%; height: 100%; }
+.porte-halo { position: absolute; width: 640px; height: 640px; border-radius: 50%; pointer-events: none;
+  background: radial-gradient(circle, rgba(37,87,214,.35), transparent 62%); filter: blur(10px); }
+.porte-carte { position: relative; z-index: 1; width: 100%; max-width: 430px; border-radius: 20px; background: var(--verre);
+  border: 1px solid rgba(94,163,255,.45); backdrop-filter: blur(14px); -webkit-backdrop-filter: blur(14px);
+  box-shadow: 0 0 0 1px rgba(94,163,255,.08), 0 0 40px rgba(37,87,214,.35), 0 30px 80px rgba(0,0,0,.6); }
+.porte-carte::before { content: ""; position: absolute; left: 24px; right: 24px; top: -1px; height: 2px; border-radius: 2px;
+  background: linear-gradient(90deg, transparent, var(--cyan-vif), transparent); }
+.porte-logo { display: flex; flex-direction: column; align-items: center; gap: 12px; padding: 28px 28px 6px; }
+.porte-marque { display: flex; align-items: center; gap: 12px; text-decoration: none; color: #fff; }
+.porte-marque:hover { color: #fff; }
+.porte-marque .bouclier { width: 58px; height: 58px; filter: drop-shadow(0 0 14px rgba(94,163,255,.55)); }
+.porte-marque strong { display: block; font-family: var(--titre); font-size: 32px; line-height: 1; letter-spacing: .12em; color: #fff; }
+.porte-marque small { display: block; margin-top: 5px; font-size: 10.5px; line-height: 1.35; color: #8FA3C4; letter-spacing: .02em; }
+.porte-statut { display: inline-flex; align-items: center; gap: 8px; padding: 4px 12px; border-radius: 999px;
+  border: 1px solid rgba(110,231,168,.35); background: rgba(110,231,168,.08); color: #8FF0BE;
+  font-family: ui-monospace, 'Cascadia Code', Consolas, monospace; font-size: 11.5px; letter-spacing: .04em; }
+.point-vert { width: 7px; height: 7px; border-radius: 50%; background: #6EE7A8; box-shadow: 0 0 8px #6EE7A8; animation: clignote 2s ease-in-out infinite; }
+.porte-corps { padding: 10px 30px 24px; display: flex; flex-direction: column; gap: 16px; }
 .porte-titre { text-align: center; display: flex; flex-direction: column; align-items: center; gap: 6px; }
-.porte-titre p { margin: 0; font-size: 14px; line-height: 1.5; color: var(--texte); }
-.porte-nom { font-size: 19px; color: #B4530F; }
-.porte-titre h2 { font-size: 24px; margin-top: 8px; }
+.porte-titre h1, .porte-titre h2 { font-size: 24px; color: #fff; margin: 0; }
+.porte-titre p { margin: 0; font-size: 14px; line-height: 1.5; color: #9FB2D1; }
+.porte-titre strong { color: #fff; }
+.porte label { color: #C9D6EC; font-size: 12.5px; letter-spacing: .03em; }
+.porte input[type=text], .porte input[type=password] { background: rgba(4,10,22,.75); border: 1px solid rgba(94,163,255,.28); color: #fff; }
+.porte input::placeholder { color: #5D6E8C; }
+.porte input:focus { outline: none; border-color: var(--cyan); box-shadow: 0 0 0 3px rgba(94,163,255,.2); background: rgba(4,10,22,.9); }
 .saisie { position: relative; display: flex; align-items: center; }
-.saisie > svg { position: absolute; left: 13px; color: var(--doux); pointer-events: none; }
-.saisie input { padding-left: 42px; background: #F7F9FC; }
-.saisie input:focus { background: #fff; }
+.saisie > svg { position: absolute; left: 13px; color: #6F86AD; pointer-events: none; }
+.saisie input { padding-left: 42px; }
 .saisie:has(.oeil) input { padding-right: 46px; }
-.oeil { position: absolute; right: 2px; width: 42px; height: 42px; border: 0; border-radius: 8px; background: transparent; color: var(--doux); cursor: pointer; display: flex; align-items: center; justify-content: center; }
-.oeil:hover, .oeil.actif { color: var(--accent); }
-.lien-oubli { align-self: flex-end; margin-top: -6px; font-size: 13px; font-weight: 600; color: #B4530F; text-decoration: none; }
-.lien-oubli:hover { color: #8A3E09; text-decoration: underline; }
-.bouton.secondaire { background: #C55A11; }
-.bouton.secondaire:hover { background: #A44A0D; }
-.lien-retour { text-align: center; font-size: 14px; }
-.porte-aide { margin: 0; font-size: 13px; color: var(--doux); }
-.porte-pied { border-top: 1px solid var(--bord); padding: 14px 24px 18px; display: flex; flex-direction: column; align-items: center; gap: 4px; font-size: 12.5px; color: var(--doux); text-align: center; }
+.oeil { position: absolute; right: 2px; width: 42px; height: 42px; border: 0; border-radius: 8px; background: transparent; color: #6F86AD; cursor: pointer; display: flex; align-items: center; justify-content: center; }
+.oeil:hover, .oeil.actif { color: var(--cyan-vif); }
+.lien-oubli { align-self: flex-end; margin-top: -6px; font-size: 13px; font-weight: 600; color: var(--cyan-vif); text-decoration: none; }
+.lien-oubli:hover { color: #fff; text-decoration: underline; }
+.porte .bouton.plein { min-height: 48px; background: linear-gradient(90deg, #2557D6, #3B7BFF); box-shadow: 0 0 22px rgba(59,123,255,.45); letter-spacing: .03em; }
+.porte .bouton.plein:hover { background: linear-gradient(90deg, #2F64F0, #5A94FF); color: #fff; }
+.porte .bouton.secondaire { background: transparent; border: 1px solid rgba(94,163,255,.45); box-shadow: none; color: #CFE0FF; }
+.porte .bouton.secondaire:hover { background: rgba(94,163,255,.1); color: #fff; }
+.lien-retour { text-align: center; font-size: 14px; color: var(--cyan-vif); }
+.porte-aide { margin: 0; font-size: 13px; color: #8FA3C4; }
+.porte .flash { background: rgba(110,231,168,.1); color: #A7F3CB; border-color: rgba(110,231,168,.35); }
+.porte .flash.erreur { background: rgba(255,120,90,.1); color: #FFB59E; border-color: rgba(255,120,90,.4); }
+.porte-pied { border-top: 1px solid rgba(94,163,255,.15); padding: 14px 24px 18px; display: flex; flex-direction: column; align-items: center; gap: 4px;
+  font-size: 12px; color: #6F82A3; text-align: center; }
 .porte-pied span { display: inline-flex; align-items: center; gap: 6px; }
-.pastille-icone { width: 56px; height: 56px; border-radius: 50%; background: var(--accent-pale); color: var(--accent); display: flex; align-items: center; justify-content: center; }
+.pastille-icone { width: 56px; height: 56px; border-radius: 50%; background: rgba(94,163,255,.12); color: var(--cyan-vif); display: flex; align-items: center; justify-content: center; box-shadow: 0 0 18px rgba(94,163,255,.3); }
 .champ-code { letter-spacing: 10px; font-size: 22px !important; text-align: center; font-family: var(--titre); }
 .orbite { transform-box: view-box; transform-origin: 200px 200px; animation: rotation 40s linear infinite; }
 .orbite.lente { animation-duration: 90s; animation-direction: reverse; }
 @keyframes rotation { to { transform: rotate(360deg); } }
-@media (prefers-reduced-motion: reduce) { .orbite { animation: none; } }
+@keyframes clignote { 50% { opacity: .35; } }
+@media (prefers-reduced-motion: reduce) { .orbite, .point-vert { animation: none; } }
 @media (max-width: 520px) {
-  .porte { padding: 36px 14px; }
-  .porte-corps { padding: 6px 20px 22px; }
-  .couche-a { transform: rotate(-3deg) translate(-6px, 4px); }
-  .couche-b { transform: rotate(2deg) translate(8px, 12px); }
+  .porte { padding: 28px 12px; background-size: 32px 32px; }
+  .porte-corps { padding: 8px 20px 22px; }
+  .porte-halo { width: 380px; height: 380px; }
 }
 
 /* Petits écrans (téléphone, fenêtre étroite) : le menu devient une barre compacte en haut */
