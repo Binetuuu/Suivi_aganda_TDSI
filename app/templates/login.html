@@ -4,9 +4,20 @@
 <h1 class="porte-h1">Connexion</h1>
 {% if erreur %}<div class="flash erreur" role="alert">{{ erreur }}</div>{% endif %}
 <form method="post" action="/login" class="formulaire">
+  <fieldset class="profils">
+    <legend>Je suis</legend>
+    {% set choix = profil or 'etudiant' %}
+    {% for valeur, libelle in [('etudiant', 'Étudiant(e)'), ('enseignant', 'Enseignant(e)'), ('admin', 'Administration')] %}
+    <label class="profil-choix">
+      <input type="radio" name="profil" value="{{ valeur }}" {{ 'checked' if choix == valeur }}>
+      <span>{{ libelle }}</span>
+    </label>
+    {% endfor %}
+  </fieldset>
   <div class="champ">
-    <label for="identifiant">Matricule ou e-mail</label>
-    <input id="identifiant" name="identifiant" type="text" required autocomplete="username" value="{{ identifiant or '' }}">
+    <label for="identifiant" data-libelle-identifiant>{{ 'Matricule ou e-mail' if choix == 'etudiant' else 'Adresse e-mail' }}</label>
+    <input id="identifiant" name="identifiant" type="text" required autocomplete="username" value="{{ identifiant or '' }}"
+           placeholder="{{ 'ex. TDSI-L3-0142' if choix == 'etudiant' else 'prenom.nom@exemple.sn' }}">
   </div>
   <div class="champ">
     <label for="mot_de_passe">Mot de passe</label>

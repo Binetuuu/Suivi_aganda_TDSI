@@ -8,7 +8,7 @@ from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
 from ..db import get_db
-from ..models import ROLES, TYPES_SEANCE, Journal, Module, Presence, Seance, User, format_duree
+from ..models import ROLES, TYPES_SEANCE, Journal, Module, Presence, Seance, User, condition_etudiant, format_duree
 from ..security import masquer_telephone
 from ..services import (
     COLONNES_IMPORT, EMPLOI_DU_TEMPS_L3TDSI_S2, RapportImport, classes, creer_ou_maj_utilisateur, envoyer_invitation,
@@ -30,11 +30,11 @@ def vue_ensemble(request: Request, user: User = Depends(admin_requis), db: Sessi
     seances = list(db.scalars(select(Seance).where(Seance.date == aujourdhui).order_by(Seance.debut)))
     live = []
     for s in seances:
-        inscrits = db.scalar(select(func.count()).select_from(User).where(User.role == "etudiant", User.classe == s.module.classe, User.actif.is_(True))) or 0
+        inscrits = db.scalar(select(func.count()).select_from(User).where(condition_etudiant(), User.classe == s.module.classe, User.actif.is_(True))) or 0
         presents = sum(1 for p in s.presences if p.statut == "present")
         en_retard = s.appel_statut == "non_lance" and datetime.combine(aujourdhui, s.debut) + timedelta(minutes=15) < datetime.now()
         live.append({"seance": s, "presents": presents, "inscrits": inscrits, "en_retard": en_retard})
-    etudiants = list(db.scalars(select(User).where(User.role == "etudiant", User.actif.is_(True))))
+    etudiants = list(db.scalars(select(User).where(condition_etudiant(), User.actif.is_(True))))
     sous_seuil = [(e, st) for e in etudiants if (st := stats_etudiant(db, e)).alerte]
     justificatifs = list(db.scalars(select(Presence).where(Presence.justif_statut == "en_attente").order_by(Presence.heure.desc())))
     journal = list(db.scalars(select(Journal).order_by(Journal.at.desc()).limit(8)))
@@ -156,6 +156,24 @@ def renvoyer(request: Request, user_id: int, user: User = Depends(admin_requis),
     db.commit()
     envoyer_invitation(cible)
     flash(request, f"Lien envoyé à {cible.nom_complet} ({cible.email}).")
+    return rediriger("/admin/utilisateurs")
+
+
+@router.post("/mon-profil-etudiant")
+def mon_profil_etudiant(request: Request, matricule: str = Form(""), classe: str = Form(""),
+                        user: User = Depends(admin_requis), db: Session = Depends(get_db)):
+    matricule, classe = matricule.strip().upper() or None, classe.strip() or None
+    if bool(matricule) != bool(classe):
+        flash(request, "Indiquez à la fois votre matricule et votre classe (ou videz les deux).", "erreur")
+        return rediriger("/admin/utilisateurs")
+    if matricule and db.scalars(select(User).where(User.matricule == matricule, User.id != user.id)).first():
+        flash(request, "Ce matricule est déjà utilisé par un autre compte.", "erreur")
+        return rediriger("/admin/utilisateurs")
+    user.matricule, user.classe = matricule, classe
+    journaliser(db, user, "profil_etudiant", f"{user.nom_complet} : {matricule or 'profil étudiant retiré'}")
+    db.commit()
+    flash(request, "Profil étudiant enregistré : choisissez « Étudiant » à la connexion, ou utilisez le lien du menu."
+          if matricule else "Profil étudiant retiré.")
     return rediriger("/admin/utilisateurs")
 
 

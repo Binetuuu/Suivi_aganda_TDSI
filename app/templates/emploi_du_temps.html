@@ -3,7 +3,7 @@
 {% block contenu %}
 {% set q_classe = '&classe=' ~ (classe | urlencode) if classe else '' %}
 <header class="entete">
-  <div><p class="surtitre">{{ user.classe if user.role == 'etudiant' else ('Mes séances' if user.role == 'enseignant' else (classe or 'Toutes les classes')) }}</p><h1>Emploi du temps</h1></div>
+  <div><p class="surtitre">{{ user.classe if user.role_actif == 'etudiant' else ('Mes séances' if user.role_actif == 'enseignant' else (classe or 'Toutes les classes')) }}</p><h1>Emploi du temps</h1></div>
   <div style="display:flex;align-items:center;gap:8px">
     <a class="bouton second" href="?semaine={{ semaine - 1 }}{{ q_classe }}" aria-label="Semaine précédente">{{ icone('retour') }}</a>
     <strong style="min-width:200px;text-align:center">Semaine du {{ lundi | date_fr(False) }}</strong>
@@ -22,11 +22,11 @@
     <div class="jour">
       <div class="jour-tete"><h3>{{ j.nom }}</h3><small>{{ j.date.strftime('%d/%m') }}</small></div>
       {% for s in j.seances %}
-      {% set lien = '/appel/' ~ s.id if user.role == 'admin' else ('/cahier/' ~ s.id ~ '/remplir' if user.role == 'enseignant' and s.module.enseignant_id == user.id else '/cours?module=' ~ s.module_id) %}
+      {% set lien = '/appel/' ~ s.id if user.role_actif == 'admin' else ('/cahier/' ~ s.id ~ '/remplir' if user.role_actif == 'enseignant' and s.module.enseignant_id == user.id else '/cours?module=' ~ s.module_id) %}
       <a class="cours {{ s.type }}" href="{{ lien }}">
         <small><strong>{{ s.horaire }}</strong></small>
         <strong style="font-size:14px">{{ s.module.nom }}</strong>
-        <small>{{ s.type }} · {{ s.salle or '—' }}{% if user.role != 'etudiant' %} · {{ s.module.classe }}{% endif %}</small>
+        <small>{{ s.type }} · {{ s.salle or '—' }}{% if user.role_actif != 'etudiant' %} · {{ s.module.classe }}{% endif %}</small>
         {% if s.appel_statut == 'clos' %}<small>Appel clôturé</small>{% elif s.appel_statut == 'ouvert' %}<small>Appel en cours</small>{% endif %}
       </a>
       {% else %}<p class="vide" style="font-size:13px">Pas de cours</p>{% endfor %}

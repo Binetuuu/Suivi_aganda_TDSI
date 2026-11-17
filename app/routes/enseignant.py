@@ -6,7 +6,7 @@ from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from ..db import get_db
-from ..models import CahierEntry, Module, Presence, Seance, User, format_duree
+from ..models import CahierEntry, Module, Presence, Seance, User, condition_etudiant, format_duree
 from ..notifications import notifier
 from ..security import lire_qr_token
 from ..services import etudiants_de_classe, heures_par_enseignant, journaliser, seances_periode, seances_sans_cahier
@@ -22,7 +22,7 @@ def seance_geree(db: Session, seance_id: int, user: User) -> Seance:
     seance = db.get(Seance, seance_id)
     if seance is None:
         raise HTTPException(404, "Séance introuvable.")
-    if user.role != "admin" and seance.module.enseignant_id != user.id:
+    if user.role_actif != "admin" and seance.module.enseignant_id != user.id:
         raise HTTPException(403, "Cette séance n'est pas la vôtre.")
     return seance
 
@@ -158,7 +158,7 @@ def api_scan(seance_id: int, scan: Scan, user: User = Depends(admin_seul), db: S
 @router.post("/api/appel/{seance_id}/manuel")
 def api_manuel(seance_id: int, saisie: Saisie, user: User = Depends(admin_seul), db: Session = Depends(get_db)):
     seance = seance_geree(db, seance_id, user)
-    etudiant = db.scalars(select(User).where(User.matricule == saisie.matricule.strip().upper(), User.role == "etudiant")).first()
+    etudiant = db.scalars(select(User).where(User.matricule == saisie.matricule.strip().upper(), condition_etudiant())).first()
     if etudiant is None:
         return {"ok": False, "message": "Matricule introuvable."}
     return _marquer_present(db, seance, etudiant, "manuel", user)

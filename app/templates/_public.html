@@ -1,17 +1,36 @@
 {% extends "base.html" %}
 {% block corps %}
 <div class="porte">
-  <main class="porte-carte">
-    <header class="porte-logo">
-      <a href="/" class="porte-marque">TDSI Campus</a>
-      <p>Suivi des cours · L3 TDSI · UCAD</p>
-    </header>
-    <div class="porte-corps">
-      {% for m in messages %}<div class="flash {{ 'erreur' if m.niveau == 'erreur' }}" role="status">{{ m.message }}</div>{% endfor %}
-      {% block public %}{% endblock %}
+  <header class="bandeau">
+    <div class="bandeau-interieur">
+      <span class="bandeau-sigle">UCAD</span>
+      <span class="bandeau-texte">Université Cheikh Anta Diop de Dakar<br><small>Faculté des Sciences et Techniques · Département de Mathématiques et Informatique</small></span>
+      <span class="bandeau-annee">Formation TDSI<br><small>Année 2025-2026</small></span>
+    </div>
+  </header>
+
+  <main class="porte-principal">
+    <div class="porte-cadre">
+      <section class="porte-info">
+        <p class="porte-surtitre">Licence 3 · Transmission de Données et Sécurité de l'Information</p>
+        <h2>TDSI Campus</h2>
+        <p class="porte-intro">La plateforme de suivi des cours de la classe : un seul endroit pour l'emploi du temps, les présences et les supports.</p>
+        <ul class="porte-liste">
+          <li><strong>Emploi du temps</strong> de la semaine, mis à jour par l'administration</li>
+          <li><strong>Appel par carte QR</strong> personnelle, scannée en début de cours</li>
+          <li><strong>Cahier de texte</strong> et supports de cours en ligne</li>
+          <li><strong>Suivi</strong> des présences, des absences et des heures de cours</li>
+        </ul>
+        <p class="porte-contact">Un problème de connexion ? Adressez-vous à la responsable de la classe.</p>
+      </section>
+      <section class="porte-form">
+        {% for m in messages %}<div class="flash {{ 'erreur' if m.niveau == 'erreur' }}" role="status">{{ m.message }}</div>{% endfor %}
+        {% block public %}{% endblock %}
+      </section>
     </div>
   </main>
-  <p class="porte-pied">© {{ annee }} Formation TDSI – Université Cheikh Anta Diop de Dakar</p>
+
+  <footer class="porte-pied">© {{ annee }} Formation TDSI – Laboratoire LACGAA · UCAD</footer>
 </div>
 {% endblock %}
 {% block scripts %}<script src="/static/public.js?v={{ version_static }}"></script>{% endblock %}

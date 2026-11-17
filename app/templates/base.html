@@ -16,11 +16,11 @@
 <div class="app">
   <nav class="menu" aria-label="Navigation principale">
     <a class="marque" href="/">
-      <span class="logo{% if user.role == 'admin' %} admin{% endif %}">TDSI</span>
-      <span><strong>TDSI Campus</strong><small>{{ {'etudiant': 'Espace étudiant', 'enseignant': 'Espace enseignant', 'admin': 'Administration'}[user.role] }}</small></span>
+      <span class="logo{% if user.role_actif == 'admin' %} admin{% endif %}">TDSI</span>
+      <span><strong>TDSI Campus</strong><small>{{ {'etudiant': 'Espace étudiant', 'enseignant': 'Espace enseignant', 'admin': 'Administration'}[user.role_actif] }}</small></span>
     </a>
     <div class="nav">
-      {% for url, ic, libelle in menus[user.role] %}
+      {% for url, ic, libelle in menus[user.role_actif] %}
       {% set actif = page == url or (url not in ('/admin', '/etudiant', '/enseignant') and page.startswith(url)) %}
       <a href="{{ url }}" {% if actif %}class="actif" aria-current="page"{% endif %}>{{ icone(ic) }}{{ libelle }}</a>
       {% endfor %}
@@ -28,8 +28,9 @@
     <div class="profil">
       <div class="qui">
         <span class="avatar">{{ user.initiales }}</span>
-        <div>{{ user.nom_complet }}<small>{% if user.role == 'etudiant' %}{{ user.classe }} · {{ user.matricule }}{% if user.delegue %} · Délégué{% endif %}{% else %}{{ user.role_libelle }}{% endif %}</small></div>
+        <div>{{ user.nom_complet }}<small>{% if user.role_actif == 'etudiant' %}{{ user.classe }} · {{ user.matricule }}{% if user.delegue %} · Délégué{% endif %}{% else %}{{ user.role_libelle }}{% endif %}</small></div>
       </div>
+      {% if user.double_profil %}{% if user.role_actif == 'etudiant' %}<a href="/espace/admin"><strong>→ Passer à l'administration</strong></a>{% else %}<a href="/espace/etudiant"><strong>→ Passer à mon espace étudiant</strong></a>{% endif %}{% endif %}
       <a href="/mot-de-passe">Changer mon mot de passe</a>
       <a href="/logout">{{ icone('sortie') }}Déconnexion</a>
     </div>

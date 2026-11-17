@@ -48,9 +48,16 @@ def creer(db, **kw) -> User:
     return u
 
 
-def connecter(client, identifiant, mdp="motdepasse-ok"):
+def connecter(client, identifiant, mdp="motdepasse-ok", profil=None):
+    if profil is None:  # profil naturel du compte
+        from app.services import trouver_par_identifiant
+
+        with SessionLocal() as s:
+            u = trouver_par_identifiant(s, identifiant)
+            profil = "etudiant" if u is not None and u.role == "etudiant" else (u.role if u else "etudiant")
     BOITE_ENVOI.clear()
-    r = client.post("/login", data={"identifiant": identifiant, "mot_de_passe": mdp}, follow_redirects=False)
+    r = client.post("/login", data={"identifiant": identifiant, "mot_de_passe": mdp, "profil": profil},
+                    follow_redirects=False)
     assert r.status_code == 303 and r.headers["location"] == "/login/code", r.text[:300]
     code = re.search(r"\b(\d{6})\b", BOITE_ENVOI[-1]["message"]).group(1)
     return client.post("/login/code", data={"code": code}, follow_redirects=False)

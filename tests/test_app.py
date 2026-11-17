@@ -425,3 +425,36 @@ def test_modele_excel_telechargeable_et_reimportable(client, db):
     r = client.post("/admin/import", files={"fichier": ("Import_comptes_TDSI_Campus.xlsx", tampon.getvalue(),
                     "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")})
     assert "1 compte(s) créé(s)" in r.text and "0 erreur(s)" in r.text
+
+
+def test_responsable_admin_et_etudiante(client, db):
+    prof, admin, e1, e2, autre, module, seance = _classe(db)
+    connecter(client, "admin@test.sn")
+    # 1. la responsable se déclare étudiante de la classe
+    r = client.post("/admin/mon-profil-etudiant", data={"matricule": "t-0042", "classe": "L3"})
+    assert "Profil étudiant enregistré" in r.text
+    db.expire_all()
+    moi = db.get(User, admin.id)
+    assert moi.role == "admin" and moi.double_profil
+    # elle apparaît dans l'appel et sa carte QR est acceptée
+    client.post(f"/appel/{seance.id}/ouvrir")
+    assert client.post(f"/api/appel/{seance.id}/scan", json={"token": qr_token(moi)}).json()["ok"]
+    assert client.get(f"/api/appel/{seance.id}/etat").json()["total"] == 3
+    # 2. connexion avec le profil « Étudiant » → espace étudiant, pas d'accès admin
+    with TestClient(app) as etu:
+        assert connecter(etu, "T-0042", profil="etudiant").headers["location"] == "/etudiant"
+        assert "T-0042" in etu.get("/etudiant/carte").text
+        assert etu.get("/admin").status_code == 403
+        assert "Passer à l'administration" in etu.get("/etudiant").text
+        # 3. bascule vers l'administration et retour
+        assert etu.get("/espace/admin", follow_redirects=False).headers["location"] == "/admin"
+        assert etu.get("/admin").status_code == 200
+        assert etu.get("/espace/etudiant", follow_redirects=False).headers["location"] == "/etudiant"
+    # 4. un étudiant ne peut pas se connecter avec le profil « Administration »
+    r = client.post("/login", data={"identifiant": "T-0002", "mot_de_passe": "motdepasse-ok", "profil": "admin"})
+    assert "accès « administration »" in r.text
+    # 5. un import ne lui retire pas ses droits d'administration
+    csv = "matricule;nom;prenom;role;email;telephone;classe\nT-0042;Admin;Test;etudiant;admin@test.sn;;L3\n"
+    client.post("/admin/import", files={"fichier": ("l.csv", csv.encode(), "text/csv")})
+    db.expire_all()
+    assert db.get(User, admin.id).role == "admin"

@@ -42,6 +42,7 @@ def utilisateur_courant(request: Request, db: Session = Depends(get_db)) -> User
     if user is None or not user.actif:
         request.session.pop("uid", None)
         raise Redirection("/login")
+    user.espace = request.session.get("espace")
     if user.must_change_password and request.url.path != "/mot-de-passe":
         raise Redirection("/mot-de-passe")
     return user
@@ -49,7 +50,7 @@ def utilisateur_courant(request: Request, db: Session = Depends(get_db)) -> User
 
 def exiger_role(*roles: str):
     def dependance(user: User = Depends(utilisateur_courant)) -> User:
-        if user.role not in roles:
+        if user.role_actif not in roles:
             raise HTTPException(status_code=403, detail="Accès réservé.")
         return user
 

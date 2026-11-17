@@ -10,7 +10,7 @@ from sqlalchemy import func, or_, select
 from sqlalchemy.orm import Session
 
 from . import config
-from .models import MOT_DE_PASSE_NON_DEFINI, ROLES, CahierEntry, Journal, Module, Presence, Seance, User
+from .models import MOT_DE_PASSE_NON_DEFINI, ROLES, condition_etudiant, CahierEntry, Journal, Module, Presence, Seance, User
 from .notifications import notifier
 from .security import normaliser_email, normaliser_telephone
 
@@ -37,7 +37,7 @@ def trouver_par_identifiant(db: Session, identifiant: str) -> User | None:
 
 def etudiants_de_classe(db: Session, classe: str) -> list[User]:
     return list(db.scalars(
-        select(User).where(User.role == "etudiant", User.classe == classe, User.actif.is_(True))
+        select(User).where(condition_etudiant(), User.classe == classe, User.actif.is_(True))
         .order_by(User.nom, User.prenom)
     ))
 
@@ -198,7 +198,9 @@ def creer_ou_maj_utilisateur(db: Session, data: dict, rapport: RapportImport, li
         return None
     if existants:
         user = existants[0]
-        user.nom, user.prenom, user.role, user.classe = nom, prenom, role, classe
+        if user.role == "admin":
+            role = "admin"  # un import ne retire jamais les droits d'administration
+        user.nom, user.prenom, user.role, user.classe = nom, prenom, role, classe or user.classe
         user.matricule = matricule or user.matricule
         user.email = email or user.email
         user.telephone = tel or user.telephone

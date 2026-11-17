@@ -17,7 +17,7 @@
 {% if modules %}
 <div class="filtres" role="group" aria-label="Filtrer par module">
   <a class="puce {{ 'actif' if not module_actif }}" href="/cours">Tous</a>
-  {% for m in modules %}<a class="puce {{ 'actif' if m.id == module_actif }}" href="/cours?module={{ m.id }}">{{ m.nom }}{% if user.role != 'etudiant' %} · {{ m.classe }}{% endif %}</a>{% endfor %}
+  {% for m in modules %}<a class="puce {{ 'actif' if m.id == module_actif }}" href="/cours?module={{ m.id }}">{{ m.nom }}{% if user.role_actif != 'etudiant' %} · {{ m.classe }}{% endif %}</a>{% endfor %}
 </div>
 {% endif %}
 <section class="grille">

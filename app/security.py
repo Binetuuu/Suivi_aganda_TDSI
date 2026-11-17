@@ -89,7 +89,7 @@ def lire_qr_token(token: str, charger_user):
     if len(parts) != 3 or parts[0] != "TDSI2" or not parts[1].isdigit():
         return None, "Ce QR code n'est pas une carte TDSI."
     user = charger_user(int(parts[1]))
-    if user is None or not user.actif or user.role != "etudiant":
+    if user is None or not user.actif or not user.est_etudiant:
         return None, "Carte inconnue ou désactivée."
     if not hmac.compare_digest(parts[2], _signature(user.id, user.qr_secret)):
         return None, "Carte invalide ou remplacée : demandez à l'étudiant sa nouvelle carte."

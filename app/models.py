@@ -43,6 +43,24 @@ class User(Base):
         return f"{self.prenom} {self.nom}"
 
     @property
+    def est_etudiant(self) -> bool:
+        """Étudiant de la classe. Un compte admin peut l'être aussi (la responsable est étudiante) :
+        il lui suffit d'avoir un matricule et une classe."""
+        return self.role == "etudiant" or (self.role == "admin" and bool(self.matricule) and bool(self.classe))
+
+    @property
+    def double_profil(self) -> bool:
+        return self.role == "admin" and self.est_etudiant
+
+    @property
+    def role_actif(self) -> str:
+        """Espace dans lequel la personne navigue : « etudiant » pour un admin qui s'est connecté
+        en tant qu'étudiant(e), sinon son rôle. `espace` est fixé à chaque requête depuis la session."""
+        if getattr(self, "espace", None) == "etudiant" and self.double_profil:
+            return "etudiant"
+        return self.role
+
+    @property
     def compte_active(self) -> bool:
         """Faux tant que la personne n'a pas choisi son mot de passe via le lien reçu."""
         return self.password_hash != MOT_DE_PASSE_NON_DEFINI
@@ -116,6 +134,14 @@ class Seance(Base):
     @property
     def statut_effectif(self) -> str:
         return self.statut or "prevue"
+
+
+def condition_etudiant():
+    """Équivalent SQL de User.est_etudiant."""
+    from sqlalchemy import and_, or_
+
+    return or_(User.role == "etudiant",
+               and_(User.role == "admin", User.matricule.is_not(None), User.classe.is_not(None)))
 
 
 def format_duree(minutes: int) -> str:

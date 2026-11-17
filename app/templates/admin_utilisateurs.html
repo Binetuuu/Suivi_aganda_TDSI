@@ -36,6 +36,16 @@
   </details>
 </div>
 
+<form method="post" action="/admin/mon-profil-etudiant" class="carte formulaire">
+  <h2 style="font-size:16px">Je suis aussi étudiant(e) de la classe</h2>
+  <p class="vide" style="font-size:14px">Renseignez votre matricule et votre classe : vous aurez votre carte QR, vous compterez dans les présences, et vous pourrez vous connecter avec le profil « Étudiant ». Laissez vide pour retirer ce profil.</p>
+  <div class="deux-col">
+    <div class="champ"><label for="moi-mat">Mon matricule</label><input id="moi-mat" name="matricule" type="text" value="{{ user.matricule or '' }}" placeholder="ex. TDSI-L3-0142"></div>
+    <div class="champ"><label for="moi-classe">Ma classe</label><input id="moi-classe" name="classe" type="text" value="{{ user.classe or '' }}" list="liste-classes" placeholder="L3 TDSI"></div>
+  </div>
+  <div><button class="bouton second" type="submit">Enregistrer</button></div>
+</form>
+
 <form method="get" class="filtres" style="align-items:flex-end">
   <div class="champ"><label for="f-q">Rechercher</label><input id="f-q" name="q" type="search" value="{{ q }}" placeholder="Nom, matricule, e-mail"></div>
   <div class="champ"><label for="f-role">Rôle</label><select id="f-role" name="role"><option value="">Tous</option>

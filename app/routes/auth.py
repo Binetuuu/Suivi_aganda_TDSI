@@ -18,15 +18,27 @@ ACCUEIL = {"etudiant": "/etudiant", "enseignant": "/enseignant", "admin": "/admi
 MAX_ESSAIS_OTP = 5
 
 
-def _connecter(request: Request, db: Session, user: User, message: str | None = None):
+PROFILS = {"etudiant": "étudiant", "enseignant": "enseignant", "admin": "administration"}
+
+
+def _profil_autorise(user: User, profil: str) -> bool:
+    if profil == "etudiant":
+        return user.est_etudiant
+    return user.role == profil
+
+
+def _connecter(request: Request, db: Session, user: User, message: str | None = None, profil: str | None = None):
     request.session.clear()
     request.session["uid"] = user.id
+    if profil == "etudiant" and user.double_profil:
+        request.session["espace"] = "etudiant"  # la responsable entre dans son espace étudiant
+    user.espace = request.session.get("espace")
     if message:
         flash(request, message)
     user.derniere_connexion = datetime.now()
-    journaliser(db, user, "connexion", f"Connexion de {user.nom_complet}")
+    journaliser(db, user, "connexion", f"Connexion de {user.nom_complet} (profil {PROFILS.get(user.role_actif, user.role_actif)})")
     db.commit()
-    return rediriger("/mot-de-passe" if user.must_change_password else ACCUEIL[user.role])
+    return rediriger("/mot-de-passe" if user.must_change_password else ACCUEIL[user.role_actif])
 
 
 @router.get("/")
@@ -34,28 +46,33 @@ def accueil(request: Request, db: Session = Depends(get_db)):
     uid = request.session.get("uid")
     user = db.get(User, uid) if uid else None
     if user is not None and user.actif:
-        return rediriger(ACCUEIL[user.role])
-    return rendre(request, "login.html")  # comme le site modèle : l'accueil est la carte de connexion
+        user.espace = request.session.get("espace")
+        return rediriger(ACCUEIL[user.role_actif])
+    return rendre(request, "login.html", profil="etudiant")
 
 
 @router.get("/login")
-def page_login(request: Request):
-    return rendre(request, "login.html")
+def page_login(request: Request, profil: str = "etudiant"):
+    return rendre(request, "login.html", profil=profil if profil in PROFILS else "etudiant")
 
 
 @router.post("/login")
-def login(request: Request, identifiant: str = Form(...), mot_de_passe: str = Form(...), db: Session = Depends(get_db)):
+def login(request: Request, identifiant: str = Form(...), mot_de_passe: str = Form(...),
+          profil: str = Form("etudiant"), db: Session = Depends(get_db)):
+    profil = profil if profil in PROFILS else "etudiant"
+    page = lambda erreur: rendre(request, "login.html", identifiant=identifiant, profil=profil, erreur=erreur)  # noqa: E731
     user = trouver_par_identifiant(db, identifiant)
     if user is not None and user.actif and not user.compte_active:
-        return rendre(request, "login.html", identifiant=identifiant,
-                      erreur="Ce compte n'est pas encore activé : ouvrez le lien reçu par e-mail pour choisir votre mot de passe.")
+        return page("Ce compte n'est pas encore activé : ouvrez le lien reçu par e-mail pour choisir votre mot de passe.")
     if user is None or not user.actif or not verify_password(mot_de_passe, user.password_hash):
         journaliser(db, user, "echec_connexion", f"Identifiant saisi : {identifiant[:60]}")
         db.commit()
-        return rendre(request, "login.html", erreur="Identifiant ou mot de passe incorrect.", identifiant=identifiant)
+        return page("Identifiant ou mot de passe incorrect.")
+    if not _profil_autorise(user, profil):
+        return page(f"Ce compte n'a pas d'accès « {PROFILS[profil]} ». Choisissez votre profil en haut du formulaire.")
 
     if not config.OTP_ENABLED or not user.email:
-        return _connecter(request, db, user)
+        return _connecter(request, db, user, profil=profil)
 
     code = generer_otp()
     db.add(OtpCode(user_id=user.id, code_hash=hash_otp(code),
@@ -65,6 +82,7 @@ def login(request: Request, identifiant: str = Form(...), mot_de_passe: str = Fo
     envoyer_email(user.email, "Code de connexion TDSI", texte)
     request.session.clear()
     request.session["otp_uid"] = user.id
+    request.session["otp_profil"] = profil
     request.session["otp_email"] = masquer_email(user.email)
     return rediriger("/login/code")
 
@@ -94,7 +112,7 @@ def verifier_code(request: Request, code: str = Form(...), db: Session = Depends
         return rendre(request, "code.html", email=request.session.get("otp_email", ""), erreur="Code incorrect.")
     otp.utilise = True
     user = db.get(User, uid)
-    return _connecter(request, db, user)
+    return _connecter(request, db, user, profil=request.session.get("otp_profil"))
 
 
 @router.get("/logout")
@@ -134,7 +152,19 @@ def changer_mdp(
     journaliser(db, user, "mot_de_passe", "Mot de passe modifié")
     db.commit()
     flash(request, "Mot de passe enregistré.")
-    return rediriger(ACCUEIL[user.role])
+    return rediriger(ACCUEIL[user.role_actif])
+
+
+@router.get("/espace/{nom}")
+def changer_espace(request: Request, nom: str, user: User = Depends(utilisateur_courant)):
+    """La responsable passe de son espace étudiant à l'administration (et inversement)."""
+    if not user.double_profil or nom not in ("etudiant", "admin"):
+        return rediriger("/")
+    if nom == "etudiant":
+        request.session["espace"] = "etudiant"
+    else:
+        request.session.pop("espace", None)
+    return rediriger(ACCUEIL[nom])
 
 
 # --- Inscription par lien et mot de passe oublié -----------------------------------

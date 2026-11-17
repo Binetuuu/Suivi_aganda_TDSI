@@ -19,7 +19,7 @@
   {% for e in entrees %}
   <article class="carte">
     <div class="titre-ligne">
-      <span style="font-size:13px;font-weight:600;color:var(--accent)">{{ e.seance.module.nom }} · {{ e.seance.type }} · {{ e.seance.date | date_fr }}{% if user.role != 'etudiant' %} · {{ e.seance.module.classe }}{% endif %}</span>
+      <span style="font-size:13px;font-weight:600;color:var(--accent)">{{ e.seance.module.nom }} · {{ e.seance.type }} · {{ e.seance.date | date_fr }}{% if user.role_actif != 'etudiant' %} · {{ e.seance.module.classe }}{% endif %}</span>
       {% if e.valide_par %}<span class="pastille ok">Validé par {{ e.valide_par.nom_complet }}</span>{% else %}<span class="pastille alerte">En attente de validation</span>{% endif %}
     </div>
     <h3>{{ e.titre }}</h3>
@@ -28,8 +28,8 @@
     <div class="titre-ligne">
       <small class="vide">Rédigé par {{ e.auteur.nom_complet }} · présents {{ e.seance.presences | selectattr('statut', 'equalto', 'present') | list | length }}</small>
       <div style="display:flex;gap:10px">
-        {% if user.role == 'admin' or (user.role == 'enseignant' and e.seance.module.enseignant_id == user.id) %}<a class="bouton second petit" href="/cahier/{{ e.seance_id }}/remplir">Modifier</a>{% endif %}
-        {% if not e.valide_par and (user.role == 'admin' or (user.delegue and user.classe == e.seance.module.classe)) %}
+        {% if user.role_actif == 'admin' or (user.role_actif == 'enseignant' and e.seance.module.enseignant_id == user.id) %}<a class="bouton second petit" href="/cahier/{{ e.seance_id }}/remplir">Modifier</a>{% endif %}
+        {% if not e.valide_par and (user.role_actif == 'admin' or (user.delegue and user.classe == e.seance.module.classe)) %}
         <form method="post" action="/cahier/entree/{{ e.id }}/valider" class="inline"><button class="bouton petit" type="submit">Valider (délégué)</button></form>
         {% endif %}
       </div>
