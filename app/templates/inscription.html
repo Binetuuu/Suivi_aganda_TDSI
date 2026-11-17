@@ -2,26 +2,19 @@
 {% block titre %}Choisir mon mot de passe{% endblock %}
 {% block public %}
 {% if invalide %}
-<div class="porte-titre">
-  <h2>Lien expiré ou déjà utilisé</h2>
-  <p>Ce lien n'est plus valable. Demandez-en un nouveau : il vous sera envoyé par e-mail.</p>
-</div>
+<h1 class="porte-h1">Lien expiré ou déjà utilisé</h1>
+<p class="porte-texte">Ce lien n'est plus valable. Demandez-en un nouveau : il vous sera envoyé par e-mail.</p>
 <a class="bouton plein" href="/activer">Recevoir un nouveau lien</a>
-<a class="lien-retour" href="/login">← Retour à la connexion</a>
+<div class="porte-liens"><a href="/login">Retour à la connexion</a></div>
 {% else %}
-<div class="porte-titre">
-  <h2>{{ 'Activer mon compte' if not personne.compte_active else 'Nouveau mot de passe' }}</h2>
-  <p>Bonjour <strong>{{ personne.prenom }} {{ personne.nom }}</strong>{% if personne.matricule %} ({{ personne.matricule }}){% endif %}. Choisissez votre mot de passe personnel.</p>
-</div>
+<h1 class="porte-h1">{{ 'Activer mon compte' if not personne.compte_active else 'Nouveau mot de passe' }}</h1>
+<p class="porte-texte">Bonjour {{ personne.prenom }} {{ personne.nom }}{% if personne.matricule %} ({{ personne.matricule }}){% endif %}, choisissez votre mot de passe.</p>
 {% if erreur %}<div class="flash erreur" role="alert">{{ erreur }}</div>{% endif %}
 <form method="post" action="/inscription/{{ jeton }}" class="formulaire">
-  <div class="champ"><label for="nouveau">Mot de passe (8 caractères minimum)</label>
-    <div class="saisie">{{ icone('cadenas', 18) }}<input id="nouveau" name="nouveau" type="password" minlength="8" required autocomplete="new-password" placeholder="Mot de passe">
-      <button type="button" class="oeil" data-oeil="nouveau" aria-label="Afficher le mot de passe">{{ icone('oeil', 18) }}</button></div></div>
-  <div class="champ"><label for="confirmation">Confirmer le mot de passe</label>
-    <div class="saisie">{{ icone('cadenas', 18) }}<input id="confirmation" name="confirmation" type="password" minlength="8" required autocomplete="new-password" placeholder="Confirmer"></div></div>
-  <p class="porte-aide">Ne communiquez votre mot de passe à personne, même à l'administration.</p>
-  <button class="bouton plein" type="submit">Enregistrer et me connecter</button>
+  <div class="champ"><label for="nouveau">Mot de passe (8 caractères minimum)</label><input id="nouveau" name="nouveau" type="password" minlength="8" required autocomplete="new-password"></div>
+  <div class="champ"><label for="confirmation">Confirmer le mot de passe</label><input id="confirmation" name="confirmation" type="password" minlength="8" required autocomplete="new-password">
+    <label class="case-simple"><input type="checkbox" data-afficher="nouveau"> Afficher le mot de passe</label></div>
+  <button class="bouton plein" type="submit">Enregistrer</button>
 </form>
 {% endif %}
 {% endblock %}

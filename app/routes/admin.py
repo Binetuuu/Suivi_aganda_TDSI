@@ -14,7 +14,7 @@ from ..services import (
     COLONNES_IMPORT, EMPLOI_DU_TEMPS_L3TDSI_S2, RapportImport, classes, creer_ou_maj_utilisateur, envoyer_invitation,
     importer_emploi_du_temps, importer_utilisateurs, preparer_lien,
     journaliser, lire_fichier_import, seances_sans_cahier, stats_etudiant, taux_global,
-    changer_statut_seance, cle_enseignant, heures_par_enseignant, seances_periode,
+    changer_statut_seance, cle_enseignant, heures_par_enseignant, modele_import_xlsx, seances_periode,
 )
 from ..web import flash, rediriger, rendre, exiger_role
 
@@ -85,6 +85,12 @@ def utilisateurs(request: Request, role: str | None = None, classe: str | None =
     rapport = request.session.pop("rapport_import", None)
     return rendre(request, "admin_utilisateurs.html", user=user, utilisateurs=list(db.scalars(requete)),
                   role=role, classe=classe, q=q or "", classes=classes(db), masquer=masquer_telephone, rapport=rapport)
+
+
+@router.get("/modele-import.xlsx")
+def modele_import_excel(user: User = Depends(admin_requis)):
+    return Response(modele_import_xlsx(), media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+                    headers={"Content-Disposition": "attachment; filename=Import_comptes_TDSI_Campus.xlsx"})
 
 
 @router.get("/modele-import.csv")

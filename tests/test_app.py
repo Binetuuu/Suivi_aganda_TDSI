@@ -406,3 +406,22 @@ def test_heures_enseignants_pour_le_paiement(client, db):
         mes = p.get(f"/enseignant/heures?du={du}&au={au}").text
         assert "4 h 30" in mes and "Confirmer faite" not in mes
         assert p.post(f"/admin/seances/{s_mbaye.id}/statut", data={"statut": "effectuee"}).status_code == 403
+
+
+def test_modele_excel_telechargeable_et_reimportable(client, db):
+    import io
+
+    from openpyxl import load_workbook
+
+    creer(db, nom="Admin", prenom="Test", role="admin", email="admin@test.sn")
+    connecter(client, "admin@test.sn")
+    r = client.get("/admin/modele-import.xlsx")
+    wb = load_workbook(io.BytesIO(r.content))
+    ws = wb["Comptes"]
+    assert [c.value for c in ws[1]] == ["matricule", "nom", "prenom", "role", "email", "telephone", "classe"]
+    ws["A2"], ws["B2"], ws["C2"], ws["E2"] = "TDSI-L3-0500", "NDIAYE", "Fatou", "fatou@exemple.sn"
+    tampon = io.BytesIO()
+    wb.save(tampon)
+    r = client.post("/admin/import", files={"fichier": ("Import_comptes_TDSI_Campus.xlsx", tampon.getvalue(),
+                    "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")})
+    assert "1 compte(s) créé(s)" in r.text and "0 erreur(s)" in r.text

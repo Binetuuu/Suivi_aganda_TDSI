@@ -1,17 +1,12 @@
 {% extends "_public.html" %}
 {% block titre %}Code de connexion{% endblock %}
 {% block public %}
-<div class="porte-titre">
-  <h2>Vérification en deux étapes</h2>
-  <p>Un code à 6 chiffres vient d'être envoyé à {{ email or 'votre adresse e-mail' }}. Il expire dans 10 minutes ; pensez à regarder dans les spams.</p>
-</div>
+<h1 class="porte-h1">Code de vérification</h1>
+<p class="porte-texte">Un code à 6 chiffres a été envoyé à {{ email or 'votre adresse e-mail' }}. Il expire dans 10 minutes. Pensez à regarder dans les spams.</p>
 {% if erreur %}<div class="flash erreur" role="alert">{{ erreur }}</div>{% endif %}
 <form method="post" action="/login/code" class="formulaire">
-  <div class="champ">
-    <label for="code">Code reçu</label>
-    <input id="code" name="code" type="text" inputmode="numeric" autocomplete="one-time-code" maxlength="6" required autofocus class="champ-code">
-  </div>
+  <div class="champ"><label for="code">Code reçu</label><input id="code" name="code" type="text" inputmode="numeric" autocomplete="one-time-code" maxlength="6" required autofocus></div>
   <button class="bouton plein" type="submit">Valider</button>
-  <a class="lien-retour" href="/login">← Retour à la connexion</a>
 </form>
+<div class="porte-liens"><a href="/login">Retour à la connexion</a></div>
 {% endblock %}

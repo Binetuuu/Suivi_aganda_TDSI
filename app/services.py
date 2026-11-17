@@ -472,3 +472,51 @@ def changer_statut_seance(db: Session, seance: Seance, statut: str, auteur: User
                 + (f", durée {seance.minutes_comptees} min" if statut == "effectuee" else "")
                 + (f" ({seance.motif})" if seance.motif else ""))
     db.commit()
+
+
+def modele_import_xlsx() -> bytes:
+    """Fichier Excel à remplir pour importer les comptes (rôle et classe pré-remplis)."""
+    from openpyxl import Workbook
+    from openpyxl.styles import Alignment, Border, Font, PatternFill, Side
+    from openpyxl.worksheet.datavalidation import DataValidation
+
+    wb = Workbook()
+    ws = wb.active
+    ws.title = "Comptes"
+    bord = Side(style="thin", color="C9D2E3")
+    for col, (entete, largeur) in enumerate(zip(COLONNES_IMPORT, [18, 22, 24, 14, 36, 18, 14]), start=1):
+        cellule = ws.cell(row=1, column=col, value=entete)
+        cellule.font = Font(bold=True, color="FFFFFF")
+        cellule.fill = PatternFill("solid", fgColor="1F4E9C")
+        cellule.alignment = Alignment(horizontal="center")
+        ws.column_dimensions[cellule.column_letter].width = largeur
+    for ligne in range(2, 62):
+        ws.cell(row=ligne, column=4, value="etudiant")
+        ws.cell(row=ligne, column=7, value="L3 TDSI")
+        for col in range(1, 8):
+            cellule = ws.cell(row=ligne, column=col)
+            cellule.border = Border(top=bord, bottom=bord, left=bord, right=bord)
+            if col in (1, 6):
+                cellule.number_format = "@"  # texte : garde les zéros du matricule et du téléphone
+    ws.freeze_panes = "A2"
+    validation = DataValidation(type="list", formula1='"etudiant,enseignant,admin"', allow_blank=False)
+    ws.add_data_validation(validation)
+    validation.add("D2:D61")
+    aide = wb.create_sheet("Mode d'emploi")
+    aide.column_dimensions["A"].width = 115
+    for i, texte in enumerate([
+        "Import des comptes dans TDSI Campus",
+        "",
+        "1. Dans l'onglet « Comptes », mettez une ligne par personne.",
+        "2. Obligatoire : nom, prenom, email. Pour un étudiant : aussi matricule et classe.",
+        "3. Le rôle et la classe sont déjà remplis (etudiant, L3 TDSI). Pour un professeur : choisissez « enseignant » et videz la classe.",
+        "4. Les lignes laissées vides sont ignorées.",
+        "5. Ne changez pas les titres des colonnes.",
+        "6. Sur la plateforme : Utilisateurs → Importer → choisissez ce fichier.",
+        "",
+        "Ce fichier contient des données personnelles : ne le diffusez pas et supprimez-le après l'import.",
+    ], start=1):
+        aide.cell(row=i, column=1, value=texte).font = Font(bold=i in (1, 10), size=13 if i == 1 else 11)
+    tampon = io.BytesIO()
+    wb.save(tampon)
+    return tampon.getvalue()
