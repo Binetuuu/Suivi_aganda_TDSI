@@ -1,0 +1,43 @@
+{% extends "base.html" %}
+{% block titre %}Séances passées{% endblock %}
+{% block contenu %}
+<header><p class="surtitre">Rattraper l'historique · du {{ du | date_fr(False) }} au {{ au | date_fr(False) }}</p><h1>Séances passées</h1></header>
+<div class="flash">Pour chaque séance, indiquez si le cours a eu lieu. <strong>Faite</strong> : les heures du professeur sont comptées. <strong>Non tenue</strong> : rien n'est compté (précisez le motif si vous le connaissez). Cliquez ensuite sur « Enregistrer » en bas de la page.</div>
+
+<form method="get" class="filtres" style="align-items:flex-end">
+  <div class="champ"><label for="du">Du</label><input id="du" name="du" type="date" value="{{ du.isoformat() }}"></div>
+  <div class="champ"><label for="au">Au</label><input id="au" name="au" type="date" value="{{ au.isoformat() }}"></div>
+  <button class="bouton second" type="submit">Afficher</button>
+</form>
+
+<form method="post" action="/admin/seances-passees">
+  <input type="hidden" name="du" value="{{ du.isoformat() }}"><input type="hidden" name="au" value="{{ au.isoformat() }}">
+  <section class="carte" style="padding:8px">
+    <div class="tableau"><table style="min-width:980px">
+      <thead><tr><th>Date</th><th>Horaire</th><th>Cours</th><th>Enseignant</th><th>Appel / émargement</th><th>Le cours a-t-il eu lieu ?</th><th>Motif (si non tenu)</th></tr></thead>
+      <tbody>
+      {% for s in seances %}
+        {% set st = s.statut_effectif %}
+        <tr>
+          <td style="white-space:nowrap">{{ s.date | date_fr }}</td>
+          <td style="white-space:nowrap">{{ s.horaire }}</td>
+          <td><strong>{{ s.module.nom }}</strong><br><small class="vide">{{ s.module.code or '' }}</small></td>
+          <td>{{ s.module.nom_enseignant }}</td>
+          <td style="font-size:13px">{% if s.appel_statut == 'clos' %}Appel clôturé{% else %}Pas d'appel{% endif %}{% if s.emargement_heure %}<br>Émargé {{ s.emargement_heure.strftime('%H:%M') }}{% endif %}</td>
+          <td>
+            <fieldset style="border:0;margin:0;padding:0;display:flex;gap:12px;flex-wrap:wrap">
+              <legend class="sr">Statut de la séance du {{ s.date | date_fr }}</legend>
+              <label class="case" style="min-height:32px"><input type="radio" name="statut_{{ s.id }}" value="effectuee" {{ 'checked' if st == 'effectuee' }}> Faite</label>
+              <label class="case" style="min-height:32px"><input type="radio" name="statut_{{ s.id }}" value="annulee" {{ 'checked' if st == 'annulee' }}> Non tenue</label>
+              <label class="case" style="min-height:32px"><input type="radio" name="statut_{{ s.id }}" value="prevue" {{ 'checked' if st == 'prevue' }}> Je ne sais pas</label>
+            </fieldset>
+          </td>
+          <td><label class="sr" for="motif-{{ s.id }}">Motif</label><input id="motif-{{ s.id }}" name="motif_{{ s.id }}" type="text" value="{{ s.motif or '' }}" placeholder="ex. professeur absent" style="min-height:36px"></td>
+        </tr>
+      {% else %}<tr><td colspan="7" class="vide">Aucune séance sur cette période. Chargez d'abord l'emploi du temps dans Planning, en commençant à la date de rentrée.</td></tr>{% endfor %}
+      </tbody>
+    </table></div>
+  </section>
+  {% if seances %}<div style="margin-top:16px"><button class="bouton" type="submit">Enregistrer</button></div>{% endif %}
+</form>
+{% endblock %}

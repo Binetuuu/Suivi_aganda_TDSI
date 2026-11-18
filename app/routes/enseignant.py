@@ -1,6 +1,9 @@
+import base64
+import binascii
 from datetime import date, datetime, timedelta
 
 from fastapi import APIRouter, Depends, Form, HTTPException, Request
+from fastapi.responses import Response
 from pydantic import BaseModel
 from sqlalchemy import select
 from sqlalchemy.orm import Session
@@ -168,6 +171,54 @@ def api_manuel(seance_id: int, saisie: Saisie, user: User = Depends(admin_seul),
 def api_etat(seance_id: int, user: User = Depends(admin_seul), db: Session = Depends(get_db)):
     seance = seance_geree(db, seance_id, user)
     return _etat_appel(db, seance)
+
+
+# --- Émargement de l'enseignant (signature au doigt sur le téléphone de la responsable) ---
+
+class Emargement(BaseModel):
+    nom: str
+    signature: str  # image PNG au format « data:image/png;base64,… »
+
+
+TAILLE_MAX_SIGNATURE = 300_000  # caractères base64 (≈ 220 Ko), largement assez pour un tracé
+
+
+@router.post("/api/appel/{seance_id}/emargement")
+def emarger(seance_id: int, donnees: Emargement, user: User = Depends(admin_seul), db: Session = Depends(get_db)):
+    seance = seance_geree(db, seance_id, user)
+    nom = donnees.nom.strip()[:120]
+    signature = donnees.signature.strip()
+    if not nom:
+        return {"ok": False, "message": "Indiquez le nom de l'enseignant."}
+    if not signature.startswith("data:image/png;base64,") or len(signature) > TAILLE_MAX_SIGNATURE:
+        return {"ok": False, "message": "Signature invalide : recommencez."}
+    try:
+        base64.b64decode(signature.split(",", 1)[1], validate=True)
+    except (binascii.Error, ValueError):
+        return {"ok": False, "message": "Signature invalide : recommencez."}
+    seance.emargement_signature, seance.emargement_nom, seance.emargement_heure = signature, nom, datetime.now()
+    if seance.statut_effectif != "annulee":
+        seance.statut = "effectuee"  # séance émargée = heures dues
+    journaliser(db, user, "emargement", f"{nom} a émargé · {seance.module.nom} du {seance.date:%d/%m/%Y}")
+    db.commit()
+    return {"ok": True, "message": f"Émargement enregistré : {nom} à {seance.emargement_heure:%H:%M}."}
+
+
+@router.post("/appel/{seance_id}/emargement/effacer")
+def effacer_emargement(seance_id: int, user: User = Depends(admin_seul), db: Session = Depends(get_db)):
+    seance = seance_geree(db, seance_id, user)
+    journaliser(db, user, "emargement_efface", f"{seance.emargement_nom or '?'} · {seance.module.nom} du {seance.date:%d/%m/%Y}")
+    seance.emargement_signature = seance.emargement_nom = seance.emargement_heure = None
+    db.commit()
+    return rediriger(f"/appel/{seance_id}")
+
+
+@router.get("/seances/{seance_id}/emargement.png")
+def image_emargement(seance_id: int, user: User = Depends(personnel), db: Session = Depends(get_db)):
+    seance = seance_geree(db, seance_id, user)  # admin, ou l'enseignant du module
+    if not seance.emargement_signature:
+        raise HTTPException(404, "Pas d'émargement pour cette séance.")
+    return Response(base64.b64decode(seance.emargement_signature.split(",", 1)[1]), media_type="image/png")
 
 
 # --- Cahier de texte ------------------------------------------------------------

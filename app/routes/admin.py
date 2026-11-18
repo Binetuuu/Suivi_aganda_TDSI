@@ -420,7 +420,7 @@ def export_heures(du: date | None = None, au: date | None = None,
         ws.column_dimensions[lettre].width = largeur
 
     detail = wb.create_sheet("Détail des séances")
-    detail.append(["Enseignant", "Date", "Horaire", "UE", "Module", "Classe", "Type", "Statut", "Durée comptée (h)", "Appel", "Cahier de texte", "Motif"])
+    detail.append(["Enseignant", "Date", "Horaire", "UE", "Module", "Classe", "Type", "Statut", "Durée comptée (h)", "Appel", "Émargement", "Cahier de texte", "Motif"])
     for cellule in detail[1]:
         cellule.font = Font(bold=True, color="FFFFFF")
         cellule.fill = PatternFill("solid", fgColor="2557D6")
@@ -432,13 +432,48 @@ def export_heures(du: date | None = None, au: date | None = None,
             libelles[statut] if statut != "prevue" or s.date <= date.today() else "Prévue",
             round(s.minutes_comptees / 60, 2) if statut == "effectuee" else 0,
             "Clôturé" if s.appel_statut == "clos" else ("Ouvert" if s.appel_statut == "ouvert" else "Non fait"),
+            f"Signé par {s.emargement_nom} à {s.emargement_heure:%H:%M}" if s.emargement_heure else "Non émargé",
             "Rempli" if s.cahier else "Non rempli", s.motif or "",
         ])
         detail.cell(row=detail.max_row, column=2).number_format = "DD/MM/YYYY"
-    for lettre, largeur in zip("ABCDEFGHIJKL", [30, 12, 15, 20, 40, 10, 7, 13, 17, 10, 15, 30]):
+    for lettre, largeur in zip("ABCDEFGHIJKLM", [30, 12, 15, 20, 40, 10, 7, 13, 17, 10, 30, 15, 30]):
         detail.column_dimensions[lettre].width = largeur
     tampon = io.BytesIO()
     wb.save(tampon)
     nom = f"heures_enseignants_{debut:%Y-%m-%d}_{fin:%Y-%m-%d}.xlsx"
     return Response(tampon.getvalue(), media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
                     headers={"Content-Disposition": f"attachment; filename={nom}"})
+
+
+# --- Saisie groupée des séances passées (rattrapage de l'historique) ----------------
+
+@router.get("/seances-passees")
+def seances_passees(request: Request, du: date | None = None, au: date | None = None,
+                    user: User = Depends(admin_requis), db: Session = Depends(get_db)):
+    au = au or date.today()
+    du = du or au - timedelta(days=30)
+    if du > au:
+        du, au = au, du
+    seances = list(db.scalars(select(Seance).where(Seance.date >= du, Seance.date <= au).order_by(Seance.date, Seance.debut)))
+    return rendre(request, "admin_seances_passees.html", user=user, seances=seances, du=du, au=au, format_duree=format_duree)
+
+
+@router.post("/seances-passees")
+async def enregistrer_seances_passees(request: Request, user: User = Depends(admin_requis), db: Session = Depends(get_db)):
+    formulaire = await request.form()
+    changees = 0
+    for cle, valeur in formulaire.items():
+        if not cle.startswith("statut_") or valeur not in ("prevue", "effectuee", "annulee"):
+            continue
+        seance = db.get(Seance, int(cle.split("_", 1)[1])) if cle.split("_", 1)[1].isdigit() else None
+        if seance is None:
+            continue
+        motif = (formulaire.get(f"motif_{seance.id}") or "").strip()
+        if valeur == "annulee" and not motif:
+            motif = "Cours non tenu"
+        if seance.statut_effectif != valeur or (valeur == "annulee" and motif != (seance.motif or "")):
+            changer_statut_seance(db, seance, valeur, user, motif)
+            changees += 1
+    flash(request, f"{changees} séance(s) mise(s) à jour." if changees else "Aucun changement.")
+    retour = f"/admin/seances-passees?du={formulaire.get('du', '')}&au={formulaire.get('au', '')}"
+    return rediriger(retour)

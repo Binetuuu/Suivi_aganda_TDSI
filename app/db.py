@@ -25,7 +25,8 @@ def get_db():
 _COLONNES_AJOUTEES = {
     "users": {"invitation_nonce": "VARCHAR(32)"},
     "modules": {"code": "VARCHAR(40)", "enseignant_nom": "VARCHAR(120)"},
-    "seances": {"statut": "VARCHAR(12) DEFAULT 'prevue'", "duree_minutes": "INTEGER", "motif": "VARCHAR(200)"},
+    "seances": {"statut": "VARCHAR(12) DEFAULT 'prevue'", "duree_minutes": "INTEGER", "motif": "VARCHAR(200)",
+                "emargement_signature": "TEXT", "emargement_nom": "VARCHAR(120)", "emargement_heure": "TIMESTAMP"},
 }
 
 

@@ -113,6 +113,11 @@ class Seance(Base):
     # Durée réellement faite, si elle diffère de l'horaire prévu (retard, fin anticipée).
     duree_minutes: Mapped[int | None] = mapped_column(Integer)
     motif: Mapped[str | None] = mapped_column(String(200))
+    # Émargement de l'enseignant (remplace la feuille papier) : signature dessinée (PNG en
+    # base64), nom du signataire et heure. Une séance émargée est comptée comme faite.
+    emargement_signature: Mapped[str | None] = mapped_column(Text)
+    emargement_nom: Mapped[str | None] = mapped_column(String(120))
+    emargement_heure: Mapped[datetime | None] = mapped_column(DateTime)
 
     module: Mapped[Module] = relationship()
     presences: Mapped[list["Presence"]] = relationship(back_populates="seance", cascade="all, delete-orphan")

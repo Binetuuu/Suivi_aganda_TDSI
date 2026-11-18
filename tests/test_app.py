@@ -458,3 +458,49 @@ def test_responsable_admin_et_etudiante(client, db):
     client.post("/admin/import", files={"fichier": ("l.csv", csv.encode(), "text/csv")})
     db.expire_all()
     assert db.get(User, admin.id).role == "admin"
+
+
+def test_rattrapage_semaines_du_2_et_9_novembre(client, db):
+    creer(db, nom="Admin", prenom="Test", role="admin", email="admin@test.sn")
+    connecter(client, "admin@test.sn")
+    client.post("/admin/emploi-du-temps", data={"source": "l3tdsi_s2", "debut": "2026-11-02", "fin": "2026-11-14"})
+    seances = {(s.date.isoformat(), s.debut.strftime("%H:%M")): s for s in db.query(Seance).all()}
+    assert len(seances) == 16
+    faites = {  # semaine 1 : lundi (analyse) et samedi (sécurité réseaux) ; semaine 2 : tout sauf mer., ven., sam. 10h
+        ("2026-11-02", "17:00"), ("2026-11-07", "12:00"),
+        ("2026-11-09", "17:00"), ("2026-11-10", "17:00"), ("2026-11-10", "18:00"), ("2026-11-12", "17:30"), ("2026-11-14", "12:00"),
+    }
+    donnees = {"du": "2026-11-02", "au": "2026-11-14"}
+    for cle, s in seances.items():
+        donnees[f"statut_{s.id}"] = "effectuee" if cle in faites else "annulee"
+    r = client.post("/admin/seances-passees", data=donnees)
+    assert "16 séance(s) mise(s) à jour" in r.text
+    page = client.get("/admin/heures?du=2026-11-02&au=2026-11-14").text
+    for nom, duree in [("M. Mbengue", "4 h"), ("M. Cheikh Kane KA", "6 h"), ("M. Cheikh Thiecoumbe Gueye", "1 h"),
+                       ("Nafi Dione", "2 h"), ("M. Babacar", "2 h")]:
+        assert nom in page and duree in page
+    db.expire_all()
+    kasse = [s for s in db.query(Seance).all() if s.module.enseignant_nom == "M. Kasse"]
+    assert all(s.statut == "annulee" and s.motif == "Cours non tenu" for s in kasse)
+
+
+def test_emargement_signe_du_professeur(client, db):
+    import base64
+
+    prof, admin, e1, e2, autre, module, seance = _classe(db)
+    connecter(client, "admin@test.sn")
+    image = "data:image/png;base64," + base64.b64encode(b"\x89PNG\r\n\x1a\n signature").decode()
+    assert client.post(f"/api/appel/{seance.id}/emargement", json={"nom": "", "signature": image}).json()["ok"] is False
+    assert client.post(f"/api/appel/{seance.id}/emargement", json={"nom": "Prof", "signature": "pas une image"}).json()["ok"] is False
+    r = client.post(f"/api/appel/{seance.id}/emargement", json={"nom": "Alpha Prof", "signature": image}).json()
+    assert r["ok"] and "Alpha Prof" in r["message"]
+    db.expire_all()
+    s = db.get(Seance, seance.id)
+    assert s.emargement_nom == "Alpha Prof" and s.statut == "effectuee"
+    assert client.get(f"/seances/{seance.id}/emargement.png").content.startswith(b"\x89PNG")
+    assert "Signé par" in client.get(f"/appel/{seance.id}").text
+    # le professeur voit son émargement mais ne peut pas émarger à la place de l'administration
+    with TestClient(app) as p:
+        connecter(p, "prof@test.sn")
+        assert p.get(f"/seances/{seance.id}/emargement.png").status_code == 200
+        assert p.post(f"/api/appel/{seance.id}/emargement", json={"nom": "X", "signature": image}).status_code == 403

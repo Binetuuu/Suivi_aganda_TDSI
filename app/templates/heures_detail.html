@@ -27,7 +27,7 @@
 
 <section class="carte" style="padding:8px">
   <div class="tableau"><table style="min-width:900px">
-    <thead><tr><th>Date</th><th>Horaire</th><th>Module</th><th>Appel</th><th>Cahier</th><th>Statut</th><th>Durée comptée</th>{% if admin %}<th>Actions</th>{% endif %}</tr></thead>
+    <thead><tr><th>Date</th><th>Horaire</th><th>Module</th><th>Appel</th><th>Émargement</th><th>Cahier</th><th>Statut</th><th>Durée comptée</th>{% if admin %}<th>Actions</th>{% endif %}</tr></thead>
     <tbody>
     {% for s in seances %}
       {% set st = s.statut_effectif %}
@@ -36,6 +36,7 @@
         <td style="white-space:nowrap">{{ s.horaire }}</td>
         <td>{{ s.module.nom }}<br><small class="vide">{{ s.module.code or '' }} {{ s.module.classe }}</small></td>
         <td>{% if s.appel_statut == 'clos' %}<span class="pastille ok">Clôturé</span>{% elif s.appel_statut == 'ouvert' %}<span class="pastille info">Ouvert</span>{% else %}<span class="pastille">Non fait</span>{% endif %}</td>
+        <td>{% if s.emargement_heure %}<a href="/seances/{{ s.id }}/emargement.png" target="_blank" rel="noopener"><span class="pastille ok">Signé {{ s.emargement_heure.strftime('%H:%M') }}</span></a>{% else %}<span class="pastille">—</span>{% endif %}</td>
         <td>{% if s.cahier %}<span class="pastille ok">Rempli</span>{% else %}<span class="pastille">—</span>{% endif %}</td>
         <td>
           {% if st == 'effectuee' %}<span class="pastille ok">Faite</span>
@@ -80,7 +81,7 @@
         </td>
         {% endif %}
       </tr>
-    {% else %}<tr><td colspan="8" class="vide">Aucune séance sur cette période.</td></tr>{% endfor %}
+    {% else %}<tr><td colspan="9" class="vide">Aucune séance sur cette période.</td></tr>{% endfor %}
     </tbody>
   </table></div>
 </section>

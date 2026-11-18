@@ -57,11 +57,36 @@
     </div>
   </section>
 </div>
+
+<section class="carte" id="emargement">
+  <div class="titre-ligne">
+    <h2>Émargement de l'enseignant</h2>
+    {% if seance.emargement_heure %}<span class="pastille ok">Émargé</span>{% else %}<span class="pastille alerte">Non émargé</span>{% endif %}
+  </div>
+  {% if seance.emargement_heure %}
+  <p class="vide" style="margin:0">Signé par <strong style="color:var(--encre)">{{ seance.emargement_nom }}</strong> le {{ seance.emargement_heure.strftime('%d/%m/%Y à %H:%M') }}. La séance est comptée dans ses heures.</p>
+  <img src="/seances/{{ seance.id }}/emargement.png" alt="Signature de {{ seance.emargement_nom }}" style="max-width:360px;width:100%;border:1px solid var(--bord);border-radius:6px;background:#fff">
+  <form method="post" action="/appel/{{ seance.id }}/emargement/effacer" class="inline"><button class="lien-bouton" type="submit">Effacer et refaire l'émargement</button></form>
+  {% else %}
+  <p class="vide" style="margin:0;font-size:14px">Comme sur la feuille papier : l'enseignant écrit son nom et signe du doigt dans le cadre ci-dessous. La signature, l'heure et la séance sont enregistrées, et ses heures sont comptées.</p>
+  <div class="champ" style="max-width:360px"><label for="emarg-nom">Nom de l'enseignant</label><input id="emarg-nom" type="text" value="{{ seance.module.nom_enseignant if seance.module.enseignant_id or seance.module.enseignant_nom else '' }}"></div>
+  <div>
+    <p style="margin:0 0 6px;font-size:13px;font-weight:600">Signature</p>
+    <canvas id="emarg-zone" width="720" height="260" aria-label="Zone de signature" style="width:100%;max-width:360px;height:130px;border:1px dashed #9AA6B8;border-radius:6px;background:#fff;touch-action:none;display:block"></canvas>
+  </div>
+  <div style="display:flex;gap:10px;flex-wrap:wrap">
+    <button class="bouton" type="button" id="emarg-valider">Valider l'émargement</button>
+    <button class="bouton second" type="button" id="emarg-effacer">Recommencer</button>
+  </div>
+  <p id="emarg-message" class="vide" aria-live="polite" style="margin:0"></p>
+  {% endif %}
+</section>
 {% endblock %}
 {% block scripts %}
+<script>window.SEANCE_ID = {{ seance.id }};</script>
 {% if seance.appel_statut == 'ouvert' %}
 <script src="https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js"></script>
-<script>window.SEANCE_ID = {{ seance.id }};</script>
 <script src="/static/scan.js?v={{ version_static }}"></script>
 {% endif %}
+{% if not seance.emargement_heure %}<script src="/static/emargement.js?v={{ version_static }}"></script>{% endif %}
 {% endblock %}
