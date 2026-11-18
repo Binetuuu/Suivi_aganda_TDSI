@@ -216,3 +216,6 @@ h1 { font-size: 24px; font-weight: 600; } h2 { font-size: 18px; font-weight: 600
 .statut-seance small { color: #5B6577 !important; }
 .mobile > p { color: #5B6577 !important; }
 @media (max-width: 900px) { .menu { border-right: 0; border-bottom: 1px solid #D9DEE7; } }
+.avatar.vert { background: #1C7A4A; color: #fff; }
+.avatar.gris { background: #EEF1F6; color: #3A475E; }
+.avatar.grand { background: #1F3B6E; color: #fff; }

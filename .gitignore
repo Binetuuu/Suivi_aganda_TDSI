@@ -19,3 +19,5 @@ env.prod.yaml
 
 # Documents partagés avec la classe (peuvent contenir des données personnelles une fois remplis)
 partage/
+video_uploads/
+video.db
