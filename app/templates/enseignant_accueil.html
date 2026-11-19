@@ -10,7 +10,7 @@
     <div class="corps"><strong>{{ s.module.nom }}</strong><small>{{ s.module.classe }} · {{ s.type }} · {{ s.salle or 'Salle à définir' }}</small></div>
     {% set etats = {'non_lance': ('Appel pas encore fait', ''), 'ouvert': ('Appel en cours', 'info'), 'clos': ('Appel clôturé', 'ok')} %}
     <span class="pastille {{ etats[s.appel_statut][1] }}">{{ etats[s.appel_statut][0] }}</span>
-    <a class="bouton second petit" href="/cahier/{{ s.id }}/remplir">Cahier</a>
+    {% if s.statut_effectif == 'annulee' %}<span class="pastille">Cours annulé</span>{% else %}<a class="bouton second petit" href="/cahier/{{ s.id }}/remplir">Cahier</a>{% endif %}
   </div>
   {% else %}<p class="vide">Pas de séance aujourd'hui.</p>{% endfor %}
 </section>

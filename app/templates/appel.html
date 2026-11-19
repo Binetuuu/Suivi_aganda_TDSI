@@ -12,7 +12,7 @@
     {% else %}
     <form method="post" action="/appel/{{ seance.id }}/rouvrir" class="inline"><button class="bouton second" type="submit">Rouvrir l'appel</button></form>
     {% endif %}
-    <a class="bouton second" href="/cahier/{{ seance.id }}/remplir">Cahier de texte</a>
+    {% if seance.statut_effectif != 'annulee' %}<a class="bouton second" href="/cahier/{{ seance.id }}/remplir">Cahier de texte</a>{% endif %}
   </div>
 </header>
 

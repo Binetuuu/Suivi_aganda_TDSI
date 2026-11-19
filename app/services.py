@@ -10,7 +10,7 @@ from sqlalchemy import func, or_, select
 from sqlalchemy.orm import Session
 
 from . import config
-from .models import MOT_DE_PASSE_NON_DEFINI, ROLES, condition_etudiant, CahierEntry, Journal, Module, Presence, Seance, User
+from .models import MOT_DE_PASSE_NON_DEFINI, ROLES, condition_etudiant, condition_seance_non_annulee, CahierEntry, Journal, Module, Presence, Seance, User
 from .notifications import notifier
 from .security import normaliser_email, normaliser_telephone
 
@@ -104,7 +104,8 @@ def taux_global(db: Session, depuis: date | None = None) -> int | None:
 def seances_sans_cahier(db: Session, enseignant: User | None = None) -> list[Seance]:
     q = (
         select(Seance).join(Module).outerjoin(CahierEntry, CahierEntry.seance_id == Seance.id)
-        .where(CahierEntry.id.is_(None), Seance.date < date.today(), Seance.date >= date.today() - timedelta(days=30))
+        .where(CahierEntry.id.is_(None), condition_seance_non_annulee(),
+               Seance.date < date.today(), Seance.date >= date.today() - timedelta(days=30))
         .order_by(Seance.date.desc())
     )
     if enseignant:

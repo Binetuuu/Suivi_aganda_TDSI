@@ -504,3 +504,27 @@ def test_emargement_signe_du_professeur(client, db):
         connecter(p, "prof@test.sn")
         assert p.get(f"/seances/{seance.id}/emargement.png").status_code == 200
         assert p.post(f"/api/appel/{seance.id}/emargement", json={"nom": "X", "signature": image}).status_code == 403
+
+
+def test_cours_annule_sans_cahier_de_texte(client, db):
+    from datetime import timedelta
+
+    prof, admin, e1, e2, autre, module, seance = _classe(db)
+    hier = date.today() - timedelta(days=1)
+    tenu = Seance(module_id=module.id, date=hier, debut=heure(8), fin=heure(10), type="CM")
+    annule = Seance(module_id=module.id, date=hier, debut=heure(10), fin=heure(12), type="TD", statut="annulee",
+                    motif="Professeur absent")
+    db.add_all([tenu, annule])
+    db.commit()
+    connecter(client, "prof@test.sn")
+    accueil = client.get("/enseignant").text
+    assert f"/cahier/{tenu.id}/remplir" in accueil
+    assert f"/cahier/{annule.id}/remplir" not in accueil
+    page = client.get("/cahier").text
+    assert f"/cahier/{tenu.id}/remplir" in page and f"/cahier/{annule.id}/remplir" not in page
+    r = client.post(f"/cahier/{annule.id}/remplir", data={"titre": "Rien"})
+    assert "annulé" in r.text
+    assert db.query(CahierEntry).filter_by(seance_id=annule.id).count() == 0
+    with TestClient(app) as adm:
+        connecter(adm, "admin@test.sn")
+        assert f"/cahier/{annule.id}/remplir" not in adm.get("/admin").text

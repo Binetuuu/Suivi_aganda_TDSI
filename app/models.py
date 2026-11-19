@@ -141,6 +141,13 @@ class Seance(Base):
         return self.statut or "prevue"
 
 
+def condition_seance_non_annulee():
+    """Équivalent SQL de « statut_effectif != 'annulee' » (une séance annulée n'a pas de cahier de texte)."""
+    from sqlalchemy import or_
+
+    return or_(Seance.statut.is_(None), Seance.statut != "annulee")
+
+
 def condition_etudiant():
     """Équivalent SQL de User.est_etudiant."""
     from sqlalchemy import and_, or_

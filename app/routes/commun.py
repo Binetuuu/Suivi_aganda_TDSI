@@ -12,7 +12,7 @@ from sqlalchemy.orm import Session
 
 from .. import config, stockage
 from ..db import get_db
-from ..models import CahierEntry, Module, Seance, Support, User
+from ..models import CahierEntry, Module, Seance, Support, User, condition_seance_non_annulee
 from ..services import classes, debut_semaine, journaliser
 from ..web import JOURS, flash, rediriger, rendre, utilisateur_courant
 
@@ -116,7 +116,8 @@ def cahier(request: Request, user: User = Depends(utilisateur_courant), db: Sess
     if user.role_actif in ("enseignant", "admin") and ids:
         a_remplir = list(db.scalars(
             select(Seance).outerjoin(CahierEntry, CahierEntry.seance_id == Seance.id)
-            .where(Seance.module_id.in_(ids), CahierEntry.id.is_(None), Seance.date <= date.today())
+            .where(Seance.module_id.in_(ids), CahierEntry.id.is_(None), condition_seance_non_annulee(),
+                   Seance.date <= date.today())
             .order_by(Seance.date.desc()).limit(10)
         ))
     return rendre(request, "cahier.html", user=user, entrees=entrees, a_remplir=a_remplir)

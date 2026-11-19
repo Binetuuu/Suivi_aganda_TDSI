@@ -226,6 +226,9 @@ def image_emargement(seance_id: int, user: User = Depends(personnel), db: Sessio
 @router.get("/cahier/{seance_id}/remplir")
 def page_remplir(request: Request, seance_id: int, user: User = Depends(personnel), db: Session = Depends(get_db)):
     seance = seance_geree(db, seance_id, user)
+    if seance.statut_effectif == "annulee":
+        flash(request, "Ce cours a été annulé : il n'y a pas de cahier de texte à remplir.", "erreur")
+        return rediriger("/cahier")
     return rendre(request, "cahier_form.html", user=user, seance=seance, entree=seance.cahier)
 
 
@@ -236,6 +239,9 @@ def remplir(
     user: User = Depends(personnel), db: Session = Depends(get_db),
 ):
     seance = seance_geree(db, seance_id, user)
+    if seance.statut_effectif == "annulee":
+        flash(request, "Ce cours a été annulé : il n'y a pas de cahier de texte à remplir.", "erreur")
+        return rediriger("/cahier")
     if not titre.strip():
         flash(request, "Le titre de la séance est obligatoire.", "erreur")
         return rediriger(f"/cahier/{seance_id}/remplir")

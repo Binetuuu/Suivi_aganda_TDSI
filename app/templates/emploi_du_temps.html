@@ -22,12 +22,12 @@
     <div class="jour">
       <div class="jour-tete"><h3>{{ j.nom }}</h3><small>{{ j.date.strftime('%d/%m') }}</small></div>
       {% for s in j.seances %}
-      {% set lien = '/appel/' ~ s.id if user.role_actif == 'admin' else ('/cahier/' ~ s.id ~ '/remplir' if user.role_actif == 'enseignant' and s.module.enseignant_id == user.id else '/cours?module=' ~ s.module_id) %}
+      {% set lien = '/appel/' ~ s.id if user.role_actif == 'admin' else ('/cahier/' ~ s.id ~ '/remplir' if user.role_actif == 'enseignant' and s.module.enseignant_id == user.id and s.statut_effectif != 'annulee' else '/cours?module=' ~ s.module_id) %}
       <a class="cours {{ s.type }}" href="{{ lien }}">
         <small><strong>{{ s.horaire }}</strong></small>
         <strong style="font-size:14px">{{ s.module.nom }}</strong>
         <small>{{ s.type }} · {{ s.salle or '—' }}{% if user.role_actif != 'etudiant' %} · {{ s.module.classe }}{% endif %}</small>
-        {% if s.appel_statut == 'clos' %}<small>Appel clôturé</small>{% elif s.appel_statut == 'ouvert' %}<small>Appel en cours</small>{% endif %}
+        {% if s.statut_effectif == 'annulee' %}<small>Cours annulé</small>{% elif s.appel_statut == 'clos' %}<small>Appel clôturé</small>{% elif s.appel_statut == 'ouvert' %}<small>Appel en cours</small>{% endif %}
       </a>
       {% else %}<p class="vide" style="font-size:13px">Pas de cours</p>{% endfor %}
     </div>
