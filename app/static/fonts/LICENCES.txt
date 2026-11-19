@@ -1,0 +1,3 @@
+Police sous licence SIL Open Font License 1.1 (usage libre, y compris commercial) :
+- Inter (Rasmus Andersson) : https://github.com/rsms/inter
+Fichier « latin » issu de Fontsource (@fontsource-variable/inter, v5.1.0).

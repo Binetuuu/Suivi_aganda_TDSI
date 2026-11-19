@@ -54,3 +54,9 @@
   <rect x="197.5" y="206" width="5" height="12" rx="2" fill="#F5A35C"/>
 </svg>
 {%- endmacro %}
+
+{% macro marque(taille=40) -%}
+<span class="logo-marque" style="width:{{ taille }}px;height:{{ taille }}px;flex-basis:{{ taille }}px" aria-hidden="true">
+<svg viewBox="0 0 100 100" width="{{ (taille * 0.66) | int }}" height="{{ (taille * 0.66) | int }}"><path d="M29 25 50 15 71 25 70 54 61 71 50 79 39 71 30 54Z" fill="none" stroke="currentColor" stroke-width="8" stroke-linejoin="round"/><path d="M39 47 48 56 63 39" fill="none" stroke="currentColor" stroke-width="8" stroke-linecap="round" stroke-linejoin="round"/></svg>
+</span>
+{%- endmacro %}

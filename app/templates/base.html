@@ -1,4 +1,4 @@
-{% from "_icones.html" import icone, bouclier %}<!doctype html>
+{% from "_icones.html" import icone, bouclier, marque %}<!doctype html>
 <html lang="fr">
 <head>
 <meta charset="utf-8">
@@ -16,7 +16,7 @@
 <div class="app">
   <nav class="menu" aria-label="Navigation principale">
     <a class="marque" href="/">
-      <span class="logo{% if user.role_actif == 'admin' %} admin{% endif %}">TDSI</span>
+      {{ marque(42) }}
       <span><strong>TDSI Campus</strong><small>{{ {'etudiant': 'Espace étudiant', 'enseignant': 'Espace enseignant', 'admin': 'Administration'}[user.role_actif] }}</small></span>
     </a>
     <div class="nav">
