@@ -14,7 +14,7 @@ from ..services import (
     COLONNES_IMPORT, EMPLOI_DU_TEMPS_L3TDSI_S2, RapportImport, classes, creer_ou_maj_utilisateur, envoyer_invitation,
     importer_emploi_du_temps, importer_utilisateurs, preparer_lien,
     journaliser, lire_fichier_import, seances_sans_cahier, stats_etudiant, taux_global,
-    changer_statut_seance, cle_enseignant, heures_par_enseignant, modele_import_xlsx, seances_periode,
+    changer_horaire_module, changer_statut_seance, cle_enseignant, heures_par_enseignant, modele_import_xlsx, seances_periode,
 )
 from ..web import flash, rediriger, rendre, exiger_role
 
@@ -303,6 +303,34 @@ def creer_seances(
     journaliser(db, user, "planning", f"{semaines} séance(s) de {module.nom} à partir du {jour:%d/%m}")
     db.commit()
     flash(request, f"{semaines} séance(s) ajoutée(s) à l'emploi du temps.")
+    return rediriger("/admin/planning")
+
+
+@router.post("/modules/{module_id}/horaire")
+def changer_horaire(
+    request: Request, module_id: int, ancien_debut: str = Form(...), debut: str = Form(...), fin: str = Form(...),
+    a_partir_du: str = Form(""), user: User = Depends(admin_requis), db: Session = Depends(get_db),
+):
+    module = db.get(Module, module_id)
+    try:
+        depuis = date.fromisoformat(a_partir_du) if a_partir_du.strip() else None
+    except ValueError:
+        depuis = None
+    if module is None:
+        raise HTTPException(404, "Module introuvable.")
+    try:
+        ancien, h_debut, h_fin = (datetime.strptime(v, "%H:%M").time() for v in (ancien_debut, debut, fin))
+    except ValueError:
+        ancien = h_debut = h_fin = None
+    if ancien is None or h_fin <= h_debut:
+        flash(request, "Vérifiez les horaires : la fin doit être après le début.", "erreur")
+        return rediriger("/admin/planning")
+    deplacees, laissees = changer_horaire_module(db, module, ancien, h_debut, h_fin, depuis, user)
+    if not deplacees and not laissees:
+        flash(request, f"Aucune séance de {module.nom} ne commence à {ancien:%H:%M}.", "erreur")
+    else:
+        flash(request, f"{module.nom} : {deplacees} séance(s) passée(s) à {h_debut:%H:%M} – {h_fin:%H:%M}."
+              + (f" {laissees} séance(s) en double laissée(s) car elles ont déjà un appel ou un cahier." if laissees else ""))
     return rediriger("/admin/planning")
 
 

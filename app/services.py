@@ -305,6 +305,51 @@ def maintenant() -> datetime:
     return datetime.now()
 
 
+def changer_horaire_module(db: Session, module: Module, ancien_debut, nouveau_debut, nouvelle_fin,
+                           a_partir_du: date | None = None, auteur: User | None = None) -> tuple[int, int]:
+    """Déplace les séances d'un module qui commencent à `ancien_debut` vers le nouvel horaire.
+    Si une séance existe déjà au nouvel horaire le même jour (doublon d'un import), l'ancienne est supprimée
+    quand elle est vide, sinon elle est laissée telle quelle. Renvoie (déplacées, laissées)."""
+    q = select(Seance).where(Seance.module_id == module.id, Seance.debut == ancien_debut)
+    if a_partir_du:
+        q = q.where(Seance.date >= a_partir_du)
+    deplacees = laissees = 0
+    for seance in db.scalars(q).all():
+        doublon = db.scalars(select(Seance).where(
+            Seance.module_id == module.id, Seance.date == seance.date, Seance.debut == nouveau_debut,
+            Seance.id != seance.id)).first()
+        if doublon:
+            if seance.presences or seance.cahier:
+                laissees += 1
+            else:
+                db.delete(seance)
+            continue
+        seance.debut, seance.fin = nouveau_debut, nouvelle_fin
+        deplacees += 1
+    if deplacees:
+        journaliser(db, auteur, "planning", f"{module.nom} : {deplacees} séance(s) passée(s) de "
+                    f"{ancien_debut:%H:%M} à {nouveau_debut:%H:%M} – {nouvelle_fin:%H:%M}")
+    db.commit()
+    return deplacees, laissees
+
+
+# Corrections d'horaires appliquées automatiquement au démarrage (une fois appliquées, elles ne trouvent plus rien).
+CORRECTIONS_HORAIRES = [
+    # Développement web et mobile (L3 TDSI) : le jeudi de 18 h à 20 h, et non de 17 h 30 à 19 h 30.
+    ("Développement web et mobile", "L3 TDSI", "17:30", "18:00", "20:00"),
+]
+
+
+def appliquer_corrections_horaires() -> None:
+    from .db import SessionLocal
+
+    with SessionLocal() as db:
+        for nom, classe, ancien, debut, fin in CORRECTIONS_HORAIRES:
+            module = db.scalars(select(Module).where(Module.nom == nom, Module.classe == classe)).first()
+            if module:
+                changer_horaire_module(db, module, _heure(ancien), _heure(debut), _heure(fin))
+
+
 def creer_premier_admin() -> None:
     """En ligne : crée le compte de la responsable (TDSI_ADMIN_EMAIL) s'il n'existe aucun admin,
     et lui envoie son lien d'activation. Ne fait rien ensuite."""

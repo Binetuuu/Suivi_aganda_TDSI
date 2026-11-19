@@ -43,6 +43,21 @@
     {% else %}<p class="vide">Créez d'abord un module.</p>{% endif %}
   </form>
 </div>
+{% if modules %}
+<form method="post" class="carte formulaire" id="form-horaire" action="/admin/modules/{{ modules[0].id }}/horaire"
+      onsubmit="this.action='/admin/modules/' + this.querySelector('#h-mod').value + '/horaire'">
+  <h2>Changer l'horaire d'un cours</h2>
+  <p class="vide" style="font-size:14px;margin:0">Toutes les séances du module qui commencent à l'ancienne heure passent au nouvel horaire (à partir de la date choisie, ou toutes si elle est vide).</p>
+  <div class="deux-col">
+    <div class="champ"><label for="h-mod">Module</label><select id="h-mod" required>{% for m in modules %}<option value="{{ m.id }}">{{ m.nom }} · {{ m.classe }}</option>{% endfor %}</select></div>
+    <div class="champ"><label for="h-ancien">Heure de début actuelle</label><input id="h-ancien" name="ancien_debut" type="time" required></div>
+    <div class="champ"><label for="h-deb">Nouveau début</label><input id="h-deb" name="debut" type="time" required></div>
+    <div class="champ"><label for="h-fin">Nouvelle fin</label><input id="h-fin" name="fin" type="time" required></div>
+    <div class="champ"><label for="h-date">À partir du (facultatif)</label><input id="h-date" name="a_partir_du" type="date"></div>
+  </div>
+  <div><button class="bouton" type="submit">Changer l'horaire</button></div>
+</form>
+{% endif %}
 <section class="carte">
   <h2>Modules ({{ modules | length }})</h2>
   <div class="tableau"><table>

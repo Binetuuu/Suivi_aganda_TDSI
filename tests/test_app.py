@@ -468,7 +468,7 @@ def test_rattrapage_semaines_du_2_et_9_novembre(client, db):
     assert len(seances) == 16
     faites = {  # semaine 1 : lundi (analyse) et samedi (sécurité réseaux) ; semaine 2 : tout sauf mer., ven., sam. 10h
         ("2026-11-02", "17:00"), ("2026-11-07", "12:00"),
-        ("2026-11-09", "17:00"), ("2026-11-10", "17:00"), ("2026-11-10", "18:00"), ("2026-11-12", "17:30"), ("2026-11-14", "12:00"),
+        ("2026-11-09", "17:00"), ("2026-11-10", "17:00"), ("2026-11-10", "18:00"), ("2026-11-12", "18:00"), ("2026-11-14", "12:00"),
     }
     donnees = {"du": "2026-11-02", "au": "2026-11-14"}
     for cle, s in seances.items():
@@ -528,3 +528,33 @@ def test_cours_annule_sans_cahier_de_texte(client, db):
     with TestClient(app) as adm:
         connecter(adm, "admin@test.sn")
         assert f"/cahier/{annule.id}/remplir" not in adm.get("/admin").text
+
+
+def test_changer_horaire_d_un_cours(client, db):
+    from app.services import appliquer_corrections_horaires
+
+    creer(db, nom="Admin", prenom="Test", role="admin", email="admin@test.sn")
+    dev = Module(nom="Développement web et mobile", classe="L3 TDSI")
+    db.add(dev)
+    db.flush()
+    jeudis = [date(2026, 11, 5), date(2026, 11, 12), date(2026, 11, 19)]
+    for j in jeudis:  # anciennes séances créées avec l'horaire erroné
+        db.add(Seance(module_id=dev.id, date=j, debut=heure(17, 30), fin=heure(19, 30), type="CM"))
+    db.add(Seance(module_id=dev.id, date=jeudis[2], debut=heure(18), fin=heure(20), type="CM"))  # doublon vide
+    db.commit()
+    appliquer_corrections_horaires()
+    db.expire_all()
+    seances = db.query(Seance).filter_by(module_id=dev.id).order_by(Seance.date).all()
+    assert [(s.date, s.horaire) for s in seances] == [(j, "18:00 – 20:00") for j in jeudis]
+    assert seances[0].minutes_comptees == 120
+    # depuis la page Planning : à partir d'une date seulement
+    connecter(client, "admin@test.sn")
+    assert "Changer l'horaire d'un cours" in client.get("/admin/planning").text
+    r = client.post(f"/admin/modules/{dev.id}/horaire",
+                    data={"ancien_debut": "18:00", "debut": "08:00", "fin": "10:00", "a_partir_du": "2026-11-12"})
+    assert "2 séance(s) passée(s) à 08:00" in r.text
+    r = client.post(f"/admin/modules/{dev.id}/horaire", data={"ancien_debut": "18:00", "debut": "09:00", "fin": "08:00"})
+    assert "la fin doit être après le début" in r.text
+    r = client.post(f"/admin/modules/{dev.id}/horaire",
+                    data={"ancien_debut": "18:00", "debut": "08:30", "fin": "10:30", "a_partir_du": ""})
+    assert "1 séance(s) passée(s)" in r.text

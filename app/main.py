@@ -8,7 +8,7 @@ from starlette.middleware.sessions import SessionMiddleware
 
 from . import config
 from .db import init_db
-from .services import creer_premier_admin
+from .services import appliquer_corrections_horaires, creer_premier_admin
 from .routes import admin, auth, commun, enseignant, etudiant, suivi
 from .web import Redirection, rediriger, rendre
 
@@ -19,6 +19,7 @@ async def lifespan(app: FastAPI):
     if config.STOCKAGE == "local":
         config.UPLOAD_DIR.mkdir(parents=True, exist_ok=True)
     creer_premier_admin()
+    appliquer_corrections_horaires()
     yield
 
 
